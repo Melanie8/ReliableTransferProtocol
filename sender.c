@@ -9,7 +9,7 @@ int main (int argc, char **argv) {
   int c = -1;
   char *filename = NULL;
   int sber  = 0;
-  int sblr  = 0;
+  int splr  = 0;
   int delay = 0;
   char *hostname = NULL;
   char *port = NULL;
@@ -24,7 +24,7 @@ int main (int argc, char **argv) {
          We distinguish them by their indices. */
       {"file",    required_argument, NULL, 'f'},
       {"sber",    required_argument, NULL, 'e'},
-      {"sblr",    required_argument, NULL, 'l'},
+      {"splr",    required_argument, NULL, 'l'},
       {"delay",   required_argument, NULL, 'd'},
       {NULL, 0, NULL, 0}
     };
@@ -62,9 +62,9 @@ int main (int argc, char **argv) {
         break;
 
       case 'l':
-        sblr = strtol(optarg, &endptr, 10);
+        splr = strtol(optarg, &endptr, 10);
         if (*optarg == '\0' || *endptr != '\0' || sber < 0 || sber > 1000) {
-          fprintf(stderr, "Invalid sblr\n");
+          fprintf(stderr, "Invalid splr\n");
           exit(1);
         }
         break;
