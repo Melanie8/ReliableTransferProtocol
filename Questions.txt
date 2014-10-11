@@ -1,3 +1,5 @@
 Que faire sis sber, sblr, delay ne sont pas donnés ?
 Que dit le receiver si il reçoit un packet avec moins de 512 bytes ?
   Il n'expect plus rien donc que mettre dans le ACK ?
+Si le fichier a une longueur multiple de 512 on fait quoi pour que le receiver
+  que c'est fini ?? On envoit un truc de longueur nulle ?

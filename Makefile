@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-I.
 # Les .h
-DEPS =
-OBJ_S = sender.o
-OBJ_R = receiver.o
+DEPS = common.h
+OBJ_S = sender.o common.o
+OBJ_R = receiver.o common.o
 
 all: sender receiver
 

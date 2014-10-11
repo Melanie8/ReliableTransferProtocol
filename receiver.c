@@ -23,9 +23,6 @@ int main (int argc, char **argv) {
 
   int c = -1;
   char *filename = NULL;
-  int sber  = 0;
-  int splr  = 0;
-  int delay = 0;
   char *hostname = NULL;
   char *port = NULL;
 
@@ -38,9 +35,6 @@ int main (int argc, char **argv) {
       /* These options don't set a flag.
          We distinguish them by their indices. */
       {"file",    required_argument, NULL, 'f'},
-      {"sber",    required_argument, NULL, 'e'},
-      {"splr",    required_argument, NULL, 'l'},
-      {"delay",   required_argument, NULL, 'd'},
       {NULL, 0, NULL, 0}
     };
     /* getopt_long stores the option index here. */
@@ -66,30 +60,6 @@ int main (int argc, char **argv) {
 
       case 'f':
         filename = optarg;
-        break;
-
-      case 'e':
-        sber = strtol(optarg, &endptr, 10);
-        if (*optarg == '\0' || *endptr != '\0' || sber < 0 || sber > 1000) {
-          fprintf(stderr, "Invalid sber\n");
-          exit(1);
-        }
-        break;
-
-      case 'l':
-        splr = strtol(optarg, &endptr, 10);
-        if (*optarg == '\0' || *endptr != '\0' || sber < 0 || sber > 1000) {
-          fprintf(stderr, "Invalid splr\n");
-          exit(1);
-        }
-        break;
-
-      case 'd':
-        delay = strtol(optarg, &endptr, 10);
-        if (*optarg == '\0' || *endptr != '\0' || delay < 0) {
-          fprintf(stderr, "Invalid delay\n");
-          exit(1);
-        }
         break;
 
       case '?':
@@ -136,15 +106,16 @@ int main (int argc, char **argv) {
   //  | | |_| |
   // |___\___/
 
-
   struct addrinfo hints;
   struct addrinfo *result, *rp;
-  int sfd, s, j;
-
-  /* Obtain address(es) matching host/port */
+  int sfd, s;
+  struct sockaddr_storage peer_addr;
+  socklen_t peer_addr_len;
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_INET6;
+  //hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+  // I have specified the hostname so no wildcard.
   hints.ai_protocol = IPPROTO_UDP;
 
   s = getaddrinfo(hostname, port, &hints, &result);
@@ -154,8 +125,8 @@ int main (int argc, char **argv) {
   }
 
   /* getaddrinfo() returns a list of address structures.
-     Try each address until we successfully connect(2).
-     If socket(2) (or connect(2)) fails, we (close the socket
+     Try each address until we successfully bind(2).
+     If socket(2) (or bind(2)) fails, we (close the socket
      and) try the next address. */
 
   for (rp = result; rp != NULL; rp = rp->ai_next) {
@@ -164,48 +135,50 @@ int main (int argc, char **argv) {
     if (sfd == -1)
       continue;
 
-    if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+    if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;                  /* Success */
 
     close(sfd);
   }
 
   if (rp == NULL) {               /* No address succeeded */
-    fprintf(stderr, "Could not connect\n");
+    fprintf(stderr, "Could not bind\n");
     exit(EXIT_FAILURE);
   }
 
   freeaddrinfo(result);           /* No longer needed */
 
-  /* Send remaining command-line arguments as separate
-     datagrams, and read responses from server */
+  /* Read datagrams and echo them back to sender */
 
-  int fd = get_fd(filename, false);
+  int fd = get_fd(filename, true);
 
-  size_t len = BUF_SIZE;
-  ssize_t nread = 0;
-  char buf[BUF_SIZE+1];
+  ssize_t nread = BUF_SIZE;
+  char buf[BUF_SIZE];
 
-  while (len == BUF_SIZE) {
-    len = read(fd, buf, len);
-    if (len < 0) {
-      perror("read");
-      exit(EXIT_FAILURE);
-    }
+  while (nread == BUF_SIZE) {
+    peer_addr_len = sizeof(struct sockaddr_storage);
+    nread = recvfrom(sfd, buf, BUF_SIZE, 0,
+        (struct sockaddr *) &peer_addr, &peer_addr_len);
+    if (nread == -1)
+      continue;               /* Ignore failed request */
 
-    if (write(sfd, buf, len) != len) {
-      fprintf(stderr, "partial/failed write\n");
-      exit(EXIT_FAILURE);
-    }
+    char host[NI_MAXHOST], service[NI_MAXSERV];
 
-    nread = read(sfd, buf, BUF_SIZE);
-    if (nread == -1) {
-      perror("read");
-      exit(EXIT_FAILURE);
-    }
-    buf[nread] = '\0';
+    s = getnameinfo((struct sockaddr *) &peer_addr,
+        peer_addr_len, host, NI_MAXHOST,
+        service, NI_MAXSERV, NI_NUMERICSERV);
+    if (s == 0)
+      printf("Received %zd bytes from %s:%s\n",
+          nread, host, service);
+    else
+      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
 
-    printf("Received %zd bytes: %s\n", nread, buf);
+    write(fd, buf, nread);
+
+    if (sendto(sfd, buf, nread, 0,
+          (struct sockaddr *) &peer_addr,
+          peer_addr_len) != nread)
+      fprintf(stderr, "Error sending response\n");
   }
 
   exit(EXIT_SUCCESS);

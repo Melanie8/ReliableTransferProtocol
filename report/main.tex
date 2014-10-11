@@ -1,0 +1,302 @@
+\documentclass{article}
+
+\usepackage[utf8x]{inputenc}
+\usepackage[frenchb]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{fullpage}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{multirow}
+
+% Math symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+% Numbers and units
+\usepackage[squaren, Gray]{SIunits}
+\usepackage{sistyle}
+\usepackage[autolanguage]{numprint}
+%\usepackage{numprint}
+\newcommand\si[2]{\numprint[#2]{#1}}
+\newcommand\np[1]{\numprint{#1}}
+
+\DeclareMathOperator{\newdiff}{d} % use \dif instead
+\newcommand{\dif}{\newdiff\!}
+\newcommand{\fpart}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\ffpart}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\fdpart}[3]{\frac{\partial^2 #1}{\partial #2\partial #3}}
+\newcommand{\fdif}[2]{\frac{\dif #1}{\dif #2}}
+\newcommand{\ffdif}[2]{\frac{\dif^2 #1}{\dif #2^2}}
+\newcommand{\constant}{\ensuremath{\mathrm{cst}}}
+
+% Listing
+% Color
+% cfr http://en.wikibooks.org/wiki/LaTeX/Colors
+\usepackage{color}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\definecolor{dkgreen}{rgb}{0.25,0.7,0.35}
+\definecolor{dkred}{rgb}{0.7,0,0}
+
+
+\usepackage{listings}
+\lstset{
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  basicstyle=\rm\small\ttfamily,
+  keywordstyle=\bfseries\color{dkred},
+  frame=single,
+  commentstyle=\color{gray}=small,
+  stringstyle=\color{dkgreen},
+  %backgroundcolor=\color{gray!10},
+  %tabsize=2,
+  rulecolor=\color{black!30},
+  %title=\lstname,
+  breaklines=true,
+  framextopmargin=2pt,
+  framexbottommargin=2pt,
+  extendedchars=true,
+  inputencoding=utf8x,
+  language=C
+}
+
+
+\author{Benoît Legat}
+\title{RTP}
+
+\begin{document}
+
+\maketitle
+
+\appendix
+
+We need to choose family 10 (IPv6) and protocol 17 (UDP).
+
+\section{Arguments}
+\lstinline+/usr/include/bits/socket.h+
+\begin{lstlisting}
+/* Address families.  */
+#define	AF_UNSPEC	PF_UNSPEC
+#define	AF_LOCAL	PF_LOCAL
+#define	AF_UNIX		PF_UNIX
+#define	AF_FILE		PF_FILE
+#define	AF_INET		PF_INET
+#define	AF_AX25		PF_AX25
+#define	AF_IPX		PF_IPX
+#define	AF_APPLETALK	PF_APPLETALK
+#define	AF_NETROM	PF_NETROM
+#define	AF_BRIDGE	PF_BRIDGE
+#define	AF_ATMPVC	PF_ATMPVC
+#define	AF_X25		PF_X25
+#define	AF_INET6	PF_INET6
+#define	AF_ROSE		PF_ROSE
+#define	AF_DECnet	PF_DECnet
+#define	AF_NETBEUI	PF_NETBEUI
+#define	AF_SECURITY	PF_SECURITY
+#define	AF_KEY		PF_KEY
+#define	AF_NETLINK	PF_NETLINK
+#define	AF_ROUTE	PF_ROUTE
+#define	AF_PACKET	PF_PACKET
+#define	AF_ASH		PF_ASH
+#define	AF_ECONET	PF_ECONET
+#define	AF_ATMSVC	PF_ATMSVC
+#define AF_RDS		PF_RDS
+#define	AF_SNA		PF_SNA
+#define	AF_IRDA		PF_IRDA
+#define	AF_PPPOX	PF_PPPOX
+#define	AF_WANPIPE	PF_WANPIPE
+#define AF_LLC		PF_LLC
+#define AF_CAN		PF_CAN
+#define AF_TIPC		PF_TIPC
+#define	AF_BLUETOOTH	PF_BLUETOOTH
+#define	AF_IUCV		PF_IUCV
+#define AF_RXRPC	PF_RXRPC
+#define AF_ISDN		PF_ISDN
+#define AF_PHONET	PF_PHONET
+#define AF_IEEE802154	PF_IEEE802154
+#define AF_CAIF		PF_CAIF
+#define AF_ALG		PF_ALG
+#define AF_NFC		PF_NFC
+#define AF_VSOCK	PF_VSOCK
+#define	AF_MAX		PF_MAX
+\end{lstlisting}
+
+\lstinline+/usr/include/bits/socket_type.h+
+Only 1, 2 and 3 are returned when we set 0 with protocols 6, 17 and 0 respectively.
+\begin{lstlisting}
+/* Types of sockets.  */
+enum __socket_type
+{
+  SOCK_STREAM = 1,		/* Sequenced, reliable, connection-based
+				   byte streams.  */
+#define SOCK_STREAM SOCK_STREAM
+  SOCK_DGRAM = 2,		/* Connectionless, unreliable datagrams
+				   of fixed maximum length.  */
+#define SOCK_DGRAM SOCK_DGRAM
+  SOCK_RAW = 3,			/* Raw protocol interface.  */
+#define SOCK_RAW SOCK_RAW
+  SOCK_RDM = 4,			/* Reliably-delivered messages.  */
+#define SOCK_RDM SOCK_RDM
+  SOCK_SEQPACKET = 5,		/* Sequenced, reliable, connection-based,
+				   datagrams of fixed maximum length.  */
+#define SOCK_SEQPACKET SOCK_SEQPACKET
+  SOCK_DCCP = 6,		/* Datagram Congestion Control Protocol.  */
+#define SOCK_DCCP SOCK_DCCP
+  SOCK_PACKET = 10,		/* Linux specific way of getting packets
+				   at the dev level.  For writing rarp and
+				   other similar things on the user level. */
+#define SOCK_PACKET SOCK_PACKET
+
+  /* Flags to be ORed into the type parameter of socket and socketpair and
+     used for the flags parameter of paccept.  */
+
+  SOCK_CLOEXEC = 02000000,	/* Atomically set close-on-exec flag for the
+				   new descriptor(s).  */
+#define SOCK_CLOEXEC SOCK_CLOEXEC
+  SOCK_NONBLOCK = 00004000	/* Atomically mark descriptor(s) as
+				   non-blocking.  */
+#define SOCK_NONBLOCK SOCK_NONBLOCK
+};
+\end{lstlisting}
+
+\lstinline+/usr/include/bits/in.h+
+\begin{lstlisting}
+/* Standard well-defined IP protocols.  */
+enum
+  {
+    IPPROTO_IP = 0,	   /* Dummy protocol for TCP.  */
+#define IPPROTO_IP		IPPROTO_IP
+    IPPROTO_ICMP = 1,	   /* Internet Control Message Protocol.  */
+#define IPPROTO_ICMP		IPPROTO_ICMP
+    IPPROTO_IGMP = 2,	   /* Internet Group Management Protocol. */
+#define IPPROTO_IGMP		IPPROTO_IGMP
+    IPPROTO_IPIP = 4,	   /* IPIP tunnels (older KA9Q tunnels use 94).  */
+#define IPPROTO_IPIP		IPPROTO_IPIP
+    IPPROTO_TCP = 6,	   /* Transmission Control Protocol.  */
+#define IPPROTO_TCP		IPPROTO_TCP
+    IPPROTO_EGP = 8,	   /* Exterior Gateway Protocol.  */
+#define IPPROTO_EGP		IPPROTO_EGP
+    IPPROTO_PUP = 12,	   /* PUP protocol.  */
+#define IPPROTO_PUP		IPPROTO_PUP
+    IPPROTO_UDP = 17,	   /* User Datagram Protocol.  */
+#define IPPROTO_UDP		IPPROTO_UDP
+    IPPROTO_IDP = 22,	   /* XNS IDP protocol.  */
+#define IPPROTO_IDP		IPPROTO_IDP
+    IPPROTO_TP = 29,	   /* SO Transport Protocol Class 4.  */
+#define IPPROTO_TP		IPPROTO_TP
+    IPPROTO_DCCP = 33,	   /* Datagram Congestion Control Protocol.  */
+#define IPPROTO_DCCP		IPPROTO_DCCP
+    IPPROTO_IPV6 = 41,     /* IPv6 header.  */
+#define IPPROTO_IPV6		IPPROTO_IPV6
+    IPPROTO_RSVP = 46,	   /* Reservation Protocol.  */
+#define IPPROTO_RSVP		IPPROTO_RSVP
+    IPPROTO_GRE = 47,	   /* General Routing Encapsulation.  */
+#define IPPROTO_GRE		IPPROTO_GRE
+    IPPROTO_ESP = 50,      /* encapsulating security payload.  */
+#define IPPROTO_ESP		IPPROTO_ESP
+    IPPROTO_AH = 51,       /* authentication header.  */
+#define IPPROTO_AH		IPPROTO_AH
+    IPPROTO_MTP = 92,	   /* Multicast Transport Protocol.  */
+#define IPPROTO_MTP		IPPROTO_MTP
+    IPPROTO_BEETPH = 94,   /* IP option pseudo header for BEET.  */
+#define IPPROTO_BEETPH		IPPROTO_BEETPH
+    IPPROTO_ENCAP = 98,	   /* Encapsulation Header.  */
+#define IPPROTO_ENCAP		IPPROTO_ENCAP
+    IPPROTO_PIM = 103,	   /* Protocol Independent Multicast.  */
+#define IPPROTO_PIM		IPPROTO_PIM
+    IPPROTO_COMP = 108,	   /* Compression Header Protocol.  */
+#define IPPROTO_COMP		IPPROTO_COMP
+    IPPROTO_SCTP = 132,	   /* Stream Control Transmission Protocol.  */
+#define IPPROTO_SCTP		IPPROTO_SCTP
+    IPPROTO_UDPLITE = 136, /* UDP-Lite protocol.  */
+#define IPPROTO_UDPLITE		IPPROTO_UDPLITE
+    IPPROTO_RAW = 255,	   /* Raw IP packets.  */
+#define IPPROTO_RAW		IPPROTO_RAW
+    IPPROTO_MAX
+  };
+\end{lstlisting}
+
+\lstinputlisting[caption={\lstinline+/etc/protocols+}]{protocols}
+
+\begin{lstlisting}
+/* Possible values for `ai_flags' field in `addrinfo' structure.  */
+# define AI_PASSIVE	0x0001	/* Socket address is intended for `bind'.  */
+# define AI_CANONNAME	0x0002	/* Request for canonical name.  */
+# define AI_NUMERICHOST	0x0004	/* Don't use name resolution.  */
+# define AI_V4MAPPED	0x0008	/* IPv4 mapped addresses are acceptable.  */
+# define AI_ALL		0x0010	/* Return IPv4 mapped and IPv6 addresses.  */
+# define AI_ADDRCONFIG	0x0020	/* Use configuration of this host to choose
+				   returned address type..  */
+# ifdef __USE_GNU
+#  define AI_IDN	0x0040	/* IDN encode input (assuming it is encoded
+				   in the current locale's character set)
+				   before looking it up. */
+#  define AI_CANONIDN	0x0080	/* Translate canonical name from IDN format. */
+#  define AI_IDN_ALLOW_UNASSIGNED 0x0100 /* Don't reject unassigned Unicode
+					    code points.  */
+#  define AI_IDN_USE_STD3_ASCII_RULES 0x0200 /* Validate strings according to
+						STD3 rules.  */
+# endif
+# define AI_NUMERICSERV	0x0400	/* Don't use name resolution.  */
+
+/* Error values for `getaddrinfo' function.  */
+# define EAI_BADFLAGS	  -1	/* Invalid value for `ai_flags' field.  */
+# define EAI_NONAME	  -2	/* NAME or SERVICE is unknown.  */
+# define EAI_AGAIN	  -3	/* Temporary failure in name resolution.  */
+# define EAI_FAIL	  -4	/* Non-recoverable failure in name res.  */
+# define EAI_FAMILY	  -6	/* `ai_family' not supported.  */
+# define EAI_SOCKTYPE	  -7	/* `ai_socktype' not supported.  */
+# define EAI_SERVICE	  -8	/* SERVICE not supported for `ai_socktype'.  */
+# define EAI_MEMORY	  -10	/* Memory allocation failure.  */
+# define EAI_SYSTEM	  -11	/* System error returned in `errno'.  */
+# define EAI_OVERFLOW	  -12	/* Argument buffer overflow.  */
+# ifdef __USE_GNU
+#  define EAI_NODATA	  -5	/* No address associated with NAME.  */
+#  define EAI_ADDRFAMILY  -9	/* Address family for NAME not supported.  */
+#  define EAI_INPROGRESS  -100	/* Processing request in progress.  */
+#  define EAI_CANCELED	  -101	/* Request canceled.  */
+#  define EAI_NOTCANCELED -102	/* Request not canceled.  */
+#  define EAI_ALLDONE	  -103	/* All requests done.  */
+#  define EAI_INTR	  -104	/* Interrupted by a signal.  */
+#  define EAI_IDN_ENCODE  -105	/* IDN encoding failed.  */
+# endif
+
+# ifdef __USE_MISC
+#  define NI_MAXHOST      1025
+#  define NI_MAXSERV      32
+# endif
+
+# define NI_NUMERICHOST	1	/* Don't try to look up hostname.  */
+# define NI_NUMERICSERV 2	/* Don't convert port number to name.  */
+# define NI_NOFQDN	4	/* Only return nodename portion.  */
+# define NI_NAMEREQD	8	/* Don't return numeric addresses.  */
+# define NI_DGRAM	16	/* Look up UDP service rather than TCP.  */
+# ifdef __USE_GNU
+#  define NI_IDN	32	/* Convert name from IDN format.  */
+#  define NI_IDN_ALLOW_UNASSIGNED 64 /* Don't reject unassigned Unicode
+					code points.  */
+#  define NI_IDN_USE_STD3_ASCII_RULES 128 /* Validate strings according to
+					     STD3 rules.  */
+# endif
+
+/* Translate name of a service location and/or a service name to set of
+   socket addresses.
+
+   This function is a possible cancellation point and therefore not
+   marked with __THROW.  */
+extern int getaddrinfo (const char *__restrict __name,
+			const char *__restrict __service,
+			const struct addrinfo *__restrict __req,
+			struct addrinfo **__restrict __pai);
+
+/* Free `addrinfo' structure AI including associated storage.  */
+extern void freeaddrinfo (struct addrinfo *__ai) __THROW;
+
+/* Convert error return from getaddrinfo() to a string.  */
+extern const char *gai_strerror (int __ecode) __THROW;
+\end{lstlisting}
+
+\end{document}
