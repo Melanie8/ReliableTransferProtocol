@@ -35,7 +35,7 @@ int main (int argc, char **argv) {
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_INET6 | AF_INET;
-  //hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+  hints.ai_flags = AI_PASSIVE | AI_ALL;    /* For wildcard IP address */
   // I have specified the hostname so no wildcard.
   hints.ai_protocol = IPPROTO_UDP;
 
