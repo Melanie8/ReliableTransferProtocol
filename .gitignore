@@ -8,3 +8,5 @@ receiver
 *.log
 in
 out
+*.pdf
+*.swp
