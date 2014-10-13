@@ -34,7 +34,7 @@ int main (int argc, char **argv) {
   socklen_t peer_addr_len;
 
   memset(&hints, 0, sizeof(struct addrinfo));
-  hints.ai_family = AF_INET6 | AF_INET;
+  hints.ai_family = AF_UNSPEC;
   hints.ai_flags = AI_PASSIVE | AI_ALL;    /* For wildcard IP address */
   // I have specified the hostname so no wildcard.
   hints.ai_protocol = IPPROTO_UDP;
