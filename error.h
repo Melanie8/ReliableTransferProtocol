@@ -1,7 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#ifdef MAIN_FILE
+#ifdef ERROR_FILE
 volatile int panic;
 #else
 extern volatile int panic;

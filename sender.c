@@ -11,10 +11,21 @@
 #include "error.h"
 #include "common.h"
 
+
 /* Flag set by ‘--verbose’. */
 static int verbose_flag = 0;
 
+char packet[PACKET_SIZE];
+char *header;
+char *payload;
+uint16_t *payload_len;
+uint32_t *crc;
+
 int main (int argc, char **argv) {
+  header = (char *) packet;
+  payload_len = (uint16_t *) (header + 2);
+  payload = header + 4;
+  crc = (uint32_t *) (payload + 512);
 
   char *filename = NULL;
   int sber  = 0;
@@ -77,30 +88,39 @@ int main (int argc, char **argv) {
 
   int fd = get_fd(filename, false);
 
-  size_t len = BUF_SIZE;
+  size_t len = PAYLOAD_SIZE;
   ssize_t nread = 0;
-  char buf[BUF_SIZE+1];
 
-  while (len == BUF_SIZE) {
-    len = read(fd, buf, len);
+  int seq = 0;
+  while (len == PAYLOAD_SIZE) {
+    len = read(fd, payload, len);
     if (len < 0) {
       myperror("read");
       exit(EXIT_FAILURE);
     }
 
-    if (write(sfd, buf, len) != len) {
+    memset(payload + len, 0, PAYLOAD_SIZE-len);
+
+    header[0] = (PTYPE_DATA << 5);
+    header[1] = seq++;
+    *payload_len = len;
+    printf("%d\n", *payload_len);
+
+    *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
+
+    if (write(sfd, packet, PACKET_SIZE) != PACKET_SIZE) {
       fprintf(stderr, "partial/failed write\n");
       exit(EXIT_FAILURE);
     }
 
-    nread = read(sfd, buf, BUF_SIZE);
+    /*nread = read(sfd, payload, PAYLOAD_SIZE);
     if (nread == -1) {
       myperror("read");
       exit(EXIT_FAILURE);
     }
-    buf[nread] = '\0';
+    payload[nread] = '\0';
 
-    printf("Received %zd bytes: %s\n", nread, buf);
+    printf("Received %zd bytes: %s\n", nread, payload);*/
   }
 
   close_fd(fd);
