@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-I. -pthread
 # Les .h
-DEPS = common.h error.h
-OBJ_S = sender.o common.o error.o
+DEPS = common.h error.h mailbox.h agent.h timer.h
+OBJ_S = sender.o common.o error.o mailbox.o agent.o timer.c
 OBJ_R = receiver.o common.o error.o
 
 all: sender receiver
@@ -21,3 +21,6 @@ sender: $(OBJ_S)
 
 receiver: $(OBJ_R)
 	$(CC) -o $@ $^ $(CFLAGS)
+
+clean:
+	$(RM) sender receiver *.o

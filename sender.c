@@ -11,6 +11,7 @@
 #include "error.h"
 #include "common.h"
 
+int min_usec;
 
 /* Flag set by ‘--verbose’. */
 static int verbose_flag = 0;
@@ -85,6 +86,8 @@ int main (int argc, char **argv) {
 
   /* Send remaining command-line arguments as separate
      datagrams, and read responses from server */
+
+  min_usec = 1; // FIXME use real val
 
   int fd = get_fd(filename, false);
 

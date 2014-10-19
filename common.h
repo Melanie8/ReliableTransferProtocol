@@ -1,10 +1,13 @@
 #include <stdbool.h>
+#include <stdint.h>
 
 #define PACKET_SIZE 520
 #define PAYLOAD_SIZE 512
 
 #define PTYPE_DATA 1
 #define PTYPE_ACK 2
+
+#define MIN(a,b) ((a) < (b) ?  (a) : (b))
 
 void read_args (int argc, char **argv, char **filename, int *sber, int *splr, int *delay, char **hostname, char **port, int *verbose_flag);
 
