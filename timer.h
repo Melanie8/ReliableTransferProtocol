@@ -6,4 +6,4 @@ struct alarm {
   struct mailbox *inbox;
 };
 
-long get_time_nsec ();
+long get_time_usec ();
