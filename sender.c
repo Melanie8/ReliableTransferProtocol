@@ -48,7 +48,7 @@ int main (int argc, char **argv) {
   struct addrinfo *result, *rp;
   int sfd, s, j;
 
-  /* Obtain address(es) matching host/port */
+  /* Obtain address(es) matching hostname/port */
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
@@ -68,7 +68,7 @@ int main (int argc, char **argv) {
   for (rp = result; rp != NULL; rp = rp->ai_next) {
     sfd = socket(rp->ai_family, rp->ai_socktype,
         rp->ai_protocol);
-    if (sfd == -1)
+    if (sfd == -1)                                               /* QUESTION : EN QUOI C'EST UTILE? */
       continue;
 
     if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1)

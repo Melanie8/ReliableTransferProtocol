@@ -22,12 +22,16 @@
 //  / ___ \|  _ <| |_| |___) |
 // /_/   \_\_| \_\\____|____/
 
+/* Writes the message on stderr and exits the program with a
+ * failure status. 
+ */
 void bad_arg (char *message) {
   fprintf(stderr, "%s.\n", message);
   // nothing to free
   exit(EXIT_FAILURE);
 }
 
+/* Calls bad_arg if the pointer p is NULL. */
 void check_asked (void *p, char *name) {
   if (p == NULL) {
     char s[32];
@@ -36,6 +40,10 @@ void check_asked (void *p, char *name) {
   }
 }
 
+/* Checks wheter dec points to a string to can be casted into an
+ * integer within min and max. If yes, returns the integer, if 
+ * not, calls bad_arg.
+ */
 int check_int (char *dec, int min, int max, char *name) {
   char *endptr = NULL;
   long n = strtol(dec, &endptr, 10);
@@ -57,6 +65,9 @@ int check_int (char *dec, int min, int max, char *name) {
   return (int) n;
 }
 
+/* Reads all the arguments in argv and sets sber, splr, delay,
+ * hostname and ports to the corresponding values. 
+ */
 void read_args (int argc, char **argv, char **filename, int *sber, int *splr, int *delay, char **hostname, char **port, int *verbose_flag) {
   int c = -1;
   while (1) {
@@ -156,6 +167,10 @@ void read_args (int argc, char **argv, char **filename, int *sber, int *splr, in
 //  | | |_| |
 // |___\___/
 
+/* Opens filename and returns the file descriptor. 
+ * The bool write tells if want you to be able to
+ * write in this file.
+ */
 int get_fd (const char *filename, bool write) {
   if (filename == NULL) {
     return write ? STDOUT_FILENO : STDIN_FILENO;
@@ -175,6 +190,7 @@ int get_fd (const char *filename, bool write) {
   }
 }
 
+/* Closes a file descriptor. */
 void close_fd (int fd) {
   if (fd != STDOUT_FILENO && fd != STDIN_FILENO) {
     int err = close(fd);
@@ -185,6 +201,7 @@ void close_fd (int fd) {
   }
 }
 
+/* */
 uint32_t
 rc_crc32(uint32_t crc, const char *buf, size_t len)
 {
