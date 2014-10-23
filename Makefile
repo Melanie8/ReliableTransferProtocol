@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-I. -pthread
 # Les .h
-DEPS = common.h error.h mailbox.h agent.h timer.h
-OBJ_S = sender.o common.o error.o mailbox.o agent.o timer.c
+DEPS = common.h error.h mailbox.h
+OBJ_S = sender.o common.o error.o mailbox.o
 OBJ_R = receiver.o common.o error.o
 
 all: sender receiver
