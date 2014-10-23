@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-/* Node representing a slot in the buffer */
+/* Slot in the receiving buffer */
 struct slot {
   bool received;
   char data[PACKET_SIZE];

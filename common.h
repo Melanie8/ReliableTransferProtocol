@@ -1,3 +1,10 @@
+/*
+ * Written by :
+ * Benoît Legat <benoit.legat@student.uclouvain.be>
+ * Mélanie Sedda <melanie.sedda@student.uclouvain.be>
+ * October 2014
+ */
+
 #include <stdbool.h>
 #include <stdint.h>
 

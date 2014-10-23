@@ -1,3 +1,10 @@
+/*
+ * Written by :
+ * Benoît Legat <benoit.legat@student.uclouvain.be>
+ * Mélanie Sedda <melanie.sedda@student.uclouvain.be>
+ * October 2014
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -13,29 +20,38 @@
 
 #include "receiver.h"
 
-/* Flag set by ‘--verbose’. */
-static int verbose_flag = 0;
+
+static int verbose_flag = 0;        // flag set by ‘--verbose’
 
 char packet[PACKET_SIZE];           // a received packet
 char *header, *seq_num, *payload;   // pointers to the different areas of the packet
 uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
+char n;                              // number of different sequence numbers
 char lastack;                       // sequence number of the last acknowledged packet
-int n;                              // number of different sequence numbers
+
 
 int main (int argc, char **argv) {
+  
+  /* Initialisation of the variables */
   header = (char *) packet;
   seq_num = (char *) (header + 1);
-  payload_len = (uint16_t *) (header + 2);
   payload = header + 4;
+  payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  n = pow(2,SEQNUM_SIZE);  
-
+  n = pow(2,SEQNUM_SIZE);
+  lastack = n;
+  int i;
+  for (i=0; i<BUFFER_SIZE; i++) {
+    buffer[i].received = false;
+  }
+  
   char *filename = NULL;
   char *hostname = NULL;
   char *port = NULL;
 
+  /* Reading the arguments passed on the command line */
   read_args(argc, argv, &filename, NULL, NULL, NULL, &hostname, &port, &verbose_flag);
 
   //  ___ ___
@@ -112,24 +128,19 @@ int main (int argc, char **argv) {
 
   size_t len = PAYLOAD_SIZE;
   ssize_t nread = 0;
-  lastack = n;
   char type, window;
 
   peer_addr_len = sizeof(struct sockaddr_storage);
   
-  /* Init buffer */
-  int i;
-  for (i=0; i<BUFFER_SIZE; i++) {
-    buffer[i].received = false;
-  }
   
+  /* Until we reach the end of the transmission */
   while (len == PAYLOAD_SIZE) {
     
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
     if (nread == -1)
-      continue;               /* Ignore failed request */
+      continue; //Ignore failed request
     
     /* Identification of the host name of the sender and the service name associated with its port number */
     char host[NI_MAXHOST], service[NI_MAXSERV];
