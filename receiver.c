@@ -169,7 +169,7 @@ int main (int argc, char **argv) {
           /* The good frames are placed in the receive buffer */
           char slot_number = (*seq_num-lastack-1);
           buffer[slot_number].received = true;
-          memcpy(buffer[slot_number].data, payload, sizeof(buffer[slot_number].data));
+          memcpy(buffer[slot_number].data, header, PACKET_SIZE);
           
           /* All consecutive frames starting at lastack are removed from the receive buffer.
            * The payload of these frames are delivered to the user.
