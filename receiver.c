@@ -1,6 +1,15 @@
+/*
+ * Written by :
+ * Benoît Legat <benoit.legat@student.uclouvain.be>
+ * Mélanie Sedda <melanie.sedda@student.uclouvain.be>
+ * October 2014
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <getopt.h>
+#include <math.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -9,27 +18,39 @@
 #include <string.h>
 #include <errno.h>
 
-#include "common.h"
+#include "receiver.h"
 
-/* Flag set by ‘--verbose’. */
-static int verbose_flag = 0;
 
-char packet[PACKET_SIZE];
-char *header;
+static int verbose_flag = 0;        // flag set by ‘--verbose’
+
+char packet[PACKET_SIZE];           // a received packet
+char *header, *seq_num, *payload;   // pointers to the different areas of the packet
 uint16_t *payload_len;
-char *payload;
 uint32_t *crc;
+struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
+char lastack;                       // sequence number of the last acknowledged packet
+char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
+  
+  /* Initialisation of the variables */
   header = (char *) packet;
-  payload_len = (uint16_t *) (header + 2);
+  seq_num = (char *) (header + 1);
   payload = header + 4;
+  payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-
+  lastack = N-1;
+  real_window_size = BUFFER_SIZE;
+  int i;
+  for (i=0; i<BUFFER_SIZE; i++) {
+    buffer[i].received = false;
+  }
+  
   char *filename = NULL;
   char *hostname = NULL;
   char *port = NULL;
 
+  /* Reading the arguments passed on the command line */
   read_args(argc, argv, &filename, NULL, NULL, NULL, &hostname, &port, &verbose_flag);
 
   //  ___ ___
@@ -106,37 +127,74 @@ int main (int argc, char **argv) {
 
   size_t len = PAYLOAD_SIZE;
   ssize_t nread = 0;
+  char type, window;
 
+  peer_addr_len = sizeof(struct sockaddr_storage);
+  
+  
+  /* Until we reach the end of the transmission */
   while (len == PAYLOAD_SIZE) {
-    peer_addr_len = sizeof(struct sockaddr_storage);
+    
+    /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
-        (struct sockaddr *) &peer_addr, &peer_addr_len);
+                     (struct sockaddr *) &peer_addr, &peer_addr_len);
     if (nread == -1)
-      continue;               /* Ignore failed request */
-
+      continue; //Ignore failed request
+    
+    /* Identification of the host name of the sender and the service name associated with its port number */
     char host[NI_MAXHOST], service[NI_MAXSERV];
-
     s = getnameinfo((struct sockaddr *) &peer_addr,
-        peer_addr_len, host, NI_MAXHOST,
-        service, NI_MAXSERV, NI_NUMERICSERV);
+                    peer_addr_len, host, NI_MAXHOST,
+                    service, NI_MAXSERV, NI_NUMERICSERV);
     if (s == 0)
       printf("Received %zd bytes from %s:%s\n",
-          nread, host, service);
+             nread, host, service);
     else
       fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-
+    
+    /* If the CRC is not correct, the packet is dropped */
     len = *payload_len;
     uint32_t expected_crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
     if (*crc == expected_crc && len <= PAYLOAD_SIZE) {
-      printf("%u\n", len);
+      
+      /* Sanity check : the receiver only receives DATA packets with a receiving window size equal to zero */
+      type = (*header >> WINDOW_SIZE);
+      window = (*header & BUFFER_SIZE);
+      if (type == PTYPE_DATA && window==0) {
+        
+        /* A packet outside the receiving window is dropped */
+        if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
+          
+          /* The good packets are placed in the receive buffer */
+          char slot_number = (*seq_num-lastack-1);
+          buffer[slot_number].received = true;
+          memcpy(buffer[slot_number].data, header, PACKET_SIZE);
+          
+          /* All consecutive packets starting at lastack are removed from the receive buffer.
+           * The payload of these packets are delivered to the user.
+           * Lastack and the receiving window are updated.
+           */
+          for (i=0; buffer[i].received; i++) {
+            len = *((buffer[i].data)+2);
+            printf("%u\n", (uint32_t) len);
+            if (write(fd, payload, len) != len) {
+              fprintf(stderr, "Error writing the payload in the file\n");
+            }
+            buffer[i].received = false;
+          }
+          lastack = (lastack+i+1)%N;
+        }
+        
+        /* An acknowledgement is sent */
+        *seq_num = lastack;
+        header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
+        *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
+        if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
+          fprintf(stderr, "Error sending response\n");
+        }
 
-      write(fd, payload, len);
+      }
     }
-
-    /*if (sendto(sfd, buf, nread, 0,
-          (struct sockaddr *) &peer_addr,
-          peer_addr_len) != nread)
-      fprintf(stderr, "Error sending response\n");*/
   }
 
   close_fd(fd);

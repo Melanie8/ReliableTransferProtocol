@@ -1,3 +1,10 @@
+/*
+ * Written by :
+ * Benoît Legat <benoit.legat@student.uclouvain.be>
+ * Mélanie Sedda <melanie.sedda@student.uclouvain.be>
+ * October 2014
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -65,9 +72,7 @@ int check_int (char *dec, int min, int max, char *name) {
   return (int) n;
 }
 
-/* Reads all the arguments in argv and sets sber, splr, delay,
- * hostname and ports to the corresponding values. 
- */
+
 void read_args (int argc, char **argv, char **filename, int *sber, int *splr, int *delay, char **hostname, char **port, int *verbose_flag) {
   int c = -1;
   while (1) {
@@ -167,10 +172,6 @@ void read_args (int argc, char **argv, char **filename, int *sber, int *splr, in
 //  | | |_| |
 // |___\___/
 
-/* Opens filename and returns the file descriptor. 
- * The bool write tells if want you to be able to
- * write in this file.
- */
 int get_fd (const char *filename, bool write) {
   if (filename == NULL) {
     return write ? STDOUT_FILENO : STDIN_FILENO;
@@ -190,7 +191,6 @@ int get_fd (const char *filename, bool write) {
   }
 }
 
-/* Closes a file descriptor. */
 void close_fd (int fd) {
   if (fd != STDOUT_FILENO && fd != STDIN_FILENO) {
     int err = close(fd);
@@ -201,7 +201,6 @@ void close_fd (int fd) {
   }
 }
 
-/* */
 uint32_t
 rc_crc32(uint32_t crc, const char *buf, size_t len)
 {

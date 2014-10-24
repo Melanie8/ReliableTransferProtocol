@@ -103,7 +103,7 @@ int main (int argc, char **argv) {
 
     memset(payload + len, 0, PAYLOAD_SIZE-len);
 
-    header[0] = (PTYPE_DATA << 5);
+    header[0] = (PTYPE_DATA << WINDOW_SIZE);
     header[1] = seq++;
     *payload_len = len;
     printf("%d\n", *payload_len);
