@@ -5,10 +5,8 @@
 #include "common.h"
 #include "timer.h"
 
-#define MILLION 1000000
-//               123456
+extern int delay;
 
-extern int min_usec;
 long get_time_usec () {
   struct timeval now;
   gettimeofday(&now, NULL);
@@ -88,6 +86,7 @@ void check_timers () {
     struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
     alrm->id = id;
     alrm->time = time[id];
+    alrm->inbox = NULL;
     m->data = alrm;
     send_mail(inbox[id], m);
     time[id] = 0;
@@ -105,7 +104,8 @@ void timer (struct message *m) {
     free(m);
   }
   check_timers();
-  int time_to_sleep = min_usec;
+  // the minimum time that can be asked is MIN(delay, 3*delay) = delay
+  int time_to_sleep = delay;
   if (n > 0) {
     time_to_sleep = MIN(time_to_sleep, time[top_heap()]);
   }

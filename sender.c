@@ -11,7 +11,8 @@
 #include "error.h"
 #include "common.h"
 
-int min_usec;
+int delay;
+int sfd;
 
 /* Flag set by ‘--verbose’. */
 static int verbose_flag = 0;
@@ -46,7 +47,7 @@ int main (int argc, char **argv) {
 
   struct addrinfo hints;
   struct addrinfo *result, *rp;
-  int sfd, s, j;
+  int s, j;
 
   /* Obtain address(es) matching hostname/port */
 
@@ -87,8 +88,6 @@ int main (int argc, char **argv) {
   /* Send remaining command-line arguments as separate
      datagrams, and read responses from server */
 
-  min_usec = 1; // FIXME use real val
-
   int fd = get_fd(filename, false);
 
   size_t len = PAYLOAD_SIZE;
@@ -110,11 +109,6 @@ int main (int argc, char **argv) {
     printf("%d\n", *payload_len);
 
     *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
-
-    if (write(sfd, packet, PACKET_SIZE) != PACKET_SIZE) {
-      fprintf(stderr, "partial/failed write\n");
-      exit(EXIT_FAILURE);
-    }
 
     /*nread = read(sfd, payload, PAYLOAD_SIZE);
     if (nread == -1) {

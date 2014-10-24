@@ -1,3 +1,6 @@
+#ifndef _MAILBOX_H_
+#define _MAILBOX_H_
+
 #include <stdbool.h>
 
 struct mailbox;
@@ -7,7 +10,8 @@ enum message_type {
   ALARM_MESSAGE_TYPE,
   ACK_MESSAGE_TYPE,
   TIMEOUT_MESSAGE_TYPE,
-  SEND_MESSAGE_TYPE
+  SEND_MESSAGE_TYPE,
+  INIT_MESSAGE_TYPE
 };
 
 struct message {
@@ -19,3 +23,5 @@ struct mailbox *new_mailbox ();
 void delete_mailbox (struct mailbox *inbox);
 struct message *get_mail (struct mailbox *inbox, bool block);
 void send_mail (struct mailbox *inbox, struct message *m);
+
+#endif
