@@ -28,9 +28,8 @@ char *header, *seq_num, *payload;   // pointers to the different areas of the pa
 uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
-char n;                              // number of different sequence numbers
 char lastack;                       // sequence number of the last acknowledged packet
-
+char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
   
@@ -40,8 +39,8 @@ int main (int argc, char **argv) {
   payload = header + 4;
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  n = pow(2,SEQNUM_SIZE);
-  lastack = n;
+  lastack = N-1;
+  real_window_size = BUFFER_SIZE;
   int i;
   for (i=0; i<BUFFER_SIZE; i++) {
     buffer[i].received = false;
@@ -163,16 +162,16 @@ int main (int argc, char **argv) {
       window = (*header & BUFFER_SIZE);
       if (type == PTYPE_DATA && window==0) {
         
-        /* A frame outside the receiving window is dropped */
-        if (*seq_num >= ((lastack+1) %n) && *seq_num <= ((lastack+BUFFER_SIZE) %n)) {
+        /* A packet outside the receiving window is dropped */
+        if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
           
-          /* The good frames are placed in the receive buffer */
+          /* The good packets are placed in the receive buffer */
           char slot_number = (*seq_num-lastack-1);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
           
-          /* All consecutive frames starting at lastack are removed from the receive buffer.
-           * The payload of these frames are delivered to the user.
+          /* All consecutive packets starting at lastack are removed from the receive buffer.
+           * The payload of these packets are delivered to the user.
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
@@ -183,16 +182,16 @@ int main (int argc, char **argv) {
             }
             buffer[i].received = false;
           }
-          lastack += i+1;
+          lastack = (lastack+i+1)%N;
         }
-        *seq_num = lastack;
         
         /* An acknowledgement is sent */
-        header[0] = (PTYPE_ACK << WINDOW_SIZE) + BUFFER_SIZE;
+        *seq_num = lastack;
+        header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
         *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
-        } 
+        }
 
       }
     }
