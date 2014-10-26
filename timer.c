@@ -14,9 +14,11 @@ long get_time_usec () {
   return ((long) now.tv_sec) * MILLION + now.tv_usec;
 }
 
-int key[BUFFER_SIZE];
-int back[BUFFER_SIZE];
-long time[BUFFER_SIZE];
+#define N_TIMER (3*(BUFFER_SIZE))
+
+int key[N_TIMER];
+int back[N_TIMER];
+long time[N_TIMER];
 int n = 0;
 
 void swap (int a, int b) {
@@ -74,7 +76,7 @@ int poll_heap () {
   return k;
 }
 
-struct mailbox *inbox[BUFFER_SIZE];
+struct mailbox *inbox[N_TIMER];
 
 void check_timers () {
   while (n > 0 && time[top_heap()] <= get_time_usec()) {
