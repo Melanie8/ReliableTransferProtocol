@@ -5,7 +5,7 @@
 
 struct alarm {
   int id;
-  long time;
+  long timeout;
   struct mailbox *inbox;
 };
 

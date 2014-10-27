@@ -3,12 +3,14 @@
 #include <assert.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "mailbox.h"
 #include "common.h"
 #include "timer.h"
 #include "network.h"
 #include "sr.h"
+#include "error.h"
 
 // initialized to 0
 int delay;
@@ -17,7 +19,7 @@ struct mailbox *network_inbox;
 struct mailbox *timer_inbox;
 struct mailbox *sr_inbox;
 
-size_t len = PAYLOAD_SIZE;
+ssize_t len = PAYLOAD_SIZE;
 ssize_t nread;
 struct packet *packets[MAX_WIN_SIZE];
 int window_size;
@@ -47,8 +49,8 @@ void send_mail_to_network_simulator (int id_in_window) {
   m->type = ALARM_MESSAGE_TYPE;
   struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
   alrm->id = id_in_window * 3 + 2;
-  alrm->time = get_time_usec() + delay * 3 * MILLION;
-  timeout[id_in_window] = alrm->time;
+  alrm->timeout = get_time_usec() + delay * 3 * MILLION;
+  timeout[id_in_window] = alrm->timeout;
   alrm->inbox = sr_inbox;
   printf("inbox:%p\n", network_inbox);
   m->data = alrm;
@@ -71,11 +73,11 @@ bool between_mod (int a, int b, int m) {
 void check_send () {
   printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
   while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, CUR_IN_WINDOW)) {
-    printf("alloc\n", len);
+    printf("alloc\n");
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
-    printf("read\n", len);
+    printf("read\n");
     len = read(fd, CUR_PACKET->payload, len);
-    printf("read:%d\n", len);
+    printf("read:%zd\n", len);
     if (len < 0) {
       myperror("read");
       exit(EXIT_FAILURE); // FIXME do it ??
@@ -138,10 +140,10 @@ bool selective_repeat (struct message *m) {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     struct alarm *alrm = m->data;
     int id = alrm->id / 3;
-    printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->time);
+    printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->timeout);
     if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
-        && timeout[id] == alrm->time) {
+        && timeout[id] == alrm->timeout) {
       send_mail_to_network_simulator(id);
     }
   }
