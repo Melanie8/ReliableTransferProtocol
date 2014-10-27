@@ -154,7 +154,7 @@ int main (int argc, char **argv) {
     
     /* If the CRC is not correct, the packet is dropped */
     len = *payload_len;
-    uint32_t expected_crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
+    uint32_t expected_crc = rc_crc32((struct packet*) packet);
     if (*crc == expected_crc && len <= PAYLOAD_SIZE) {
       
       /* Sanity check : the receiver only receives DATA packets with a receiving window size equal to zero */
@@ -188,7 +188,7 @@ int main (int argc, char **argv) {
         /* An acknowledgement is sent */
         *seq_num = lastack;
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
-        *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
+        *crc = rc_crc32((struct packet*) packet);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }

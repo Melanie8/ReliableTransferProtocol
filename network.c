@@ -14,16 +14,16 @@ struct network_message {
   bool ack;
 };
 
-extern int sfd;
+int sfd;
+int delay;
+struct mailbox *acker_inbox;
+struct mailbox *sr_inbox;
+struct mailbox *timer_inbox;
+struct mailbox *network_inbox;
 
+// initialized to 0 (i.e. NULL)
 struct network_message *first;
 struct network_message *last;
-
-extern int delay;
-extern struct mailbox *acker_inbox;
-extern struct mailbox *sr_inbox;
-extern struct mailbox *timer_inbox;
-extern struct mailbox *network_inbox;
 
 void send_scheduled_sending () {
   // avoid overhead of calling it too many times
@@ -78,13 +78,22 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   alrm->id = sm->id * 3 + ack;
   alrm->time = nm->time;
   alrm->inbox = network_inbox;
+  printf("inbox:%p\n", network_inbox);
   m->data = alrm;
   send_mail(timer_inbox, m);
 }
 
 
-void network (struct message *m) {
+bool network (struct message *m) {
+  printf("network receives %d\n", m->type);
   if (m->type == INIT_MESSAGE_TYPE) {
+    struct network_init *init = (struct network_init *) m->data;
+    sfd = init->sfd;
+    delay = init->delay;
+    acker_inbox = init->acker_inbox;
+    sr_inbox = init->sr_inbox;
+    timer_inbox = init->timer_inbox;
+    network_inbox = init->network_inbox;
   } else if (m->type == SEND_MESSAGE_TYPE) {
     schedule_sending((struct simulator_message *) m->data, false);
   } else if (m->type == ACK_MESSAGE_TYPE) {
@@ -93,4 +102,5 @@ void network (struct message *m) {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     send_scheduled_sending();
   }
+  return true;
 }

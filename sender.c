@@ -10,6 +10,11 @@
 
 #include "error.h"
 #include "common.h"
+#include "agent.h"
+#include "acker.h"
+#include "network.h"
+#include "sr.h"
+#include "timer.h"
 
 int delay;
 int sfd;
@@ -17,18 +22,14 @@ int sfd;
 /* Flag set by ‘--verbose’. */
 static int verbose_flag = 0;
 
-char packet[PACKET_SIZE];
-char *header;
-char *payload;
-uint16_t *payload_len;
-uint32_t *crc;
+void send_init_message (struct mailbox *inbox, void *init_data) {
+  struct message *m = (struct message *) malloc(sizeof(struct message));
+  m->type = INIT_MESSAGE_TYPE;
+  m->data = init_data;
+  send_mail(inbox, m);
+}
 
 int main (int argc, char **argv) {
-  header = (char *) packet;
-  payload_len = (uint16_t *) (header + 2);
-  payload = header + 4;
-  crc = (uint32_t *) (payload + 512);
-
   char *filename = NULL;
   int sber  = 0;
   int splr  = 0;
@@ -90,37 +91,45 @@ int main (int argc, char **argv) {
 
   int fd = get_fd(filename, false);
 
-  size_t len = PAYLOAD_SIZE;
-  ssize_t nread = 0;
+  pthread_t sr_thread, timer_thread, network_thread, acker_thread;
+  struct mailbox *sr_inbox = make_agent(&sr_thread, selective_repeat);
+  struct mailbox *network_inbox = make_agent(&network_thread, network);
+  struct mailbox *timer_inbox = make_agent(&timer_thread, timer);
+  struct mailbox *acker_inbox = make_agent(&acker_thread, acker);
 
-  int seq = 0;
-  while (len == PAYLOAD_SIZE) {
-    len = read(fd, payload, len);
-    if (len < 0) {
-      myperror("read");
-      exit(EXIT_FAILURE);
-    }
+  struct sr_init *sr_i = (struct sr_init *) malloc(sizeof(struct sr_init));
+  struct network_init *network_i = (struct network_init *) malloc(sizeof(struct network_init));
+  struct timer_init *timer_i = (struct timer_init *) malloc(sizeof(struct timer_init));
+  struct sr_init *acker_i = (struct sr_init *) malloc(sizeof(struct sr_init));
+  network_i->sfd = sfd;
+  network_i->delay = delay;
+  network_i->acker_inbox = acker_inbox;
+  network_i->sr_inbox = sr_inbox;
+  network_i->timer_inbox = timer_inbox;
+  network_i->network_inbox = network_inbox;
+  timer_i->delay = delay;
+  sr_i->fd = fd;
+  sr_i->delay = delay;
+  sr_i->network_inbox = network_inbox;
+  sr_i->timer_inbox = timer_inbox;
+  sr_i->sr_inbox = sr_inbox;
+  // the order is important so that INIT is
+  // the first message sent
+  // sr with start everything so call it last
+  send_init_message(timer_inbox, timer_i);
+  send_init_message(network_inbox, network_i);
+  send_init_message(sr_inbox, sr_i);
 
-    memset(payload + len, 0, PAYLOAD_SIZE-len);
+  pthread_join(sr_thread, NULL);
+  printf("sr joined\n");
+  pthread_join(network_thread, NULL);
+  printf("network joined\n");
+  pthread_join(acker_thread, NULL);
+  printf("acker joined\n");
+  pthread_join(timer_thread, NULL);
+  printf("timer joined\n");
 
-    header[0] = (PTYPE_DATA << WINDOW_SIZE);
-    header[1] = seq++;
-    *payload_len = len;
-    printf("%d\n", *payload_len);
-
-    *crc = rc_crc32(0, packet, 4 + PAYLOAD_SIZE);
-
-    /*nread = read(sfd, payload, PAYLOAD_SIZE);
-    if (nread == -1) {
-      myperror("read");
-      exit(EXIT_FAILURE);
-    }
-    payload[nread] = '\0';
-
-    printf("Received %zd bytes: %s\n", nread, payload);*/
-  }
-
-  close_fd(fd);
+  //close_fd(fd); // done by sr
 
   exit(EXIT_SUCCESS);
 }

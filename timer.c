@@ -1,11 +1,12 @@
 #include <unistd.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <sys/time.h>
 
 #include "common.h"
 #include "timer.h"
 
-extern int delay;
+int delay;
 
 long get_time_usec () {
   struct timeval now;
@@ -51,13 +52,14 @@ void heap_up (int cur) {
 }
 
 void push_heap (int cur) {
-  if (back[cur] != 0) {
+  if (back[cur] != -1) {
     heap_down(back[cur]);
     heap_up(back[cur]);
   } else {
-    key[n++] = cur;
+    key[n] = cur;
     back[cur] = n;
-    heap_up(n);
+    n++;
+    heap_up(n-1);
   }
 }
 
@@ -73,6 +75,7 @@ int poll_heap () {
     back[key[0]] = 0;
     heap_down(0);
   }
+  back[k] = -1;
   return k;
 }
 
@@ -81,6 +84,7 @@ struct mailbox *inbox[N_TIMER];
 void check_timers () {
   while (n > 0 && time[top_heap()] <= get_time_usec()) {
     int id = poll_heap();
+    printf("%d polled\n", id);
     struct message *m = (struct message *) malloc(sizeof(struct message));
     m->type = TIMEOUT_MESSAGE_TYPE;
     struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
@@ -94,14 +98,32 @@ void check_timers () {
   }
 }
 
-void timer (struct message *m) {
+bool timer (struct message *m) {
   if (m != NULL) {
-    struct alarm *alrm = (struct alarm *) m->data;
-    time[alrm->id] = alrm->time;
-    inbox[alrm->id] = alrm->inbox;
-    push_heap(alrm->id);
-    free(alrm);
-    free(m);
+    printf("timer receives %d\n", m->type);
+    if (m->type == INIT_MESSAGE_TYPE) {
+      struct timer_init *init = (struct timer_init*) m->data;
+      printf("%p\n", init);
+      delay = init->delay;
+      int i;
+      for (i = 0; i < N_TIMER; i++) {
+        back[i] = -1;
+      }
+    } else {
+      assert(m->type == ALARM_MESSAGE_TYPE);
+      struct alarm *alrm = (struct alarm *) m->data;
+      time[alrm->id] = alrm->time;
+      printf("inbox::%p\n", inbox[alrm->id]);
+      inbox[alrm->id] = alrm->inbox;
+      printf("inbox:%d:%p\n", alrm->id, inbox[alrm->id]);
+      push_heap(alrm->id);
+      int i;
+      for (i = 0; i < n; i++) {
+        printf("%d\n", key[i]);
+      }
+    }
+  } else {
+    printf("timer receives NULL\n");
   }
   check_timers();
   // the minimum time that can be asked is MIN(delay, 3*delay) = delay
@@ -112,4 +134,5 @@ void timer (struct message *m) {
   int err = usleep(time_to_sleep);
   // TODO errors
   check_timers();
+  return n == 0;
 }

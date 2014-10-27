@@ -202,8 +202,11 @@ void close_fd (int fd) {
 }
 
 uint32_t
-rc_crc32(uint32_t crc, const char *buf, size_t len)
+rc_crc32(const struct packet *pack)
 {
+	uint32_t crc = 0;
+	const char *buf = (const char *)(&pack);
+	size_t len = 4 + PAYLOAD_SIZE;
 	static uint32_t table[256];
 	static int have_table = 0;
 	uint32_t rem;

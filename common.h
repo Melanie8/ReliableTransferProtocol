@@ -21,6 +21,7 @@
 #define PTYPE_ACK 2
 
 #define MIN(a,b) ((a) < (b) ?  (a) : (b))
+#define MAX(a,b) ((a) < (b) ?  (b) : (a))
 #define MAX_WIN_SIZE 31
 #define MAX_SEQ (1 << 8)
 
@@ -47,4 +48,4 @@ struct packet {
 void close_fd (int fd);
 
 /* */
-uint32_t rc_crc32(uint32_t crc, const char *buf, size_t len);
+uint32_t rc_crc32(const struct packet *pack);

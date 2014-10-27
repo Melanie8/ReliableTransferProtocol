@@ -7,14 +7,13 @@
 
 struct agent_args {
   struct mailbox *inbox;
-  void (*handler) (struct message*);
-  bool block;
+  bool (*handler) (struct message*);
 };
 
 int agent (void *data) {
   struct agent_args *args = (struct agent_args*) data;
   struct mailbox *inbox = args->inbox;
-  bool block = args->block;
+  bool block = true;
   bool stop = false;
   while (!stop && !panic) {
     struct message *mail = get_mail(inbox, block);
@@ -22,13 +21,19 @@ int agent (void *data) {
       stop = true;
     } else {
       if (panic) break;
-      args->handler(mail);
+      printf("%p %d\n", mail, block);
+      block = args->handler(mail);
     }
-    free(mail);
+    if (mail != NULL) {
+      if (mail->data != NULL) {
+        free(mail->data);
+      }
+      free(mail);
+    }
   }
 }
 
-struct mailbox* make_agent(pthread_t *thread, void (*handler) (struct message*), bool block) {
+struct mailbox* make_agent(pthread_t *thread, bool (*handler) (struct message*)) {
   struct agent_args *args = (struct agent_args*) malloc(sizeof(struct agent_args));
   if (args == NULL) {
     myperror("malloc");
@@ -40,7 +45,6 @@ struct mailbox* make_agent(pthread_t *thread, void (*handler) (struct message*),
     return NULL;
   }
   args->handler = handler;
-  args->block = block;
   int err = pthread_create(thread, NULL, agent, args);
   if (err != 0) {
     myerror(err, "pthread_create");
