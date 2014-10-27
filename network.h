@@ -1,3 +1,5 @@
+#include "mailbox.h"
+
 struct simulator_message {
   int id;
   struct packet *p;

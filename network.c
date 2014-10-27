@@ -3,7 +3,6 @@
 #include <assert.h>
 
 #include "common.h"
-#include "mailbox.h"
 #include "timer.h"
 #include "network.h"
 
