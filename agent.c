@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "agent.h"
 #include "error.h"
