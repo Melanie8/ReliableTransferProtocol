@@ -100,7 +100,7 @@ int main (int argc, char **argv) {
   struct sr_init *sr_i = (struct sr_init *) malloc(sizeof(struct sr_init));
   struct network_init *network_i = (struct network_init *) malloc(sizeof(struct network_init));
   struct timer_init *timer_i = (struct timer_init *) malloc(sizeof(struct timer_init));
-  struct sr_init *acker_i = (struct sr_init *) malloc(sizeof(struct sr_init));
+  struct acker_init *acker_i = (struct acker_init *) malloc(sizeof(struct acker_init));
   network_i->sfd = sfd;
   network_i->delay = delay;
   network_i->acker_inbox = acker_inbox;
@@ -113,6 +113,8 @@ int main (int argc, char **argv) {
   sr_i->network_inbox = network_inbox;
   sr_i->timer_inbox = timer_inbox;
   sr_i->sr_inbox = sr_inbox;
+  acker_i->sfd = sfd;
+  acker_i->network_inbox = network_inbox;
   // the order is important so that INIT is
   // the first message sent
   // sr with start everything so call it last

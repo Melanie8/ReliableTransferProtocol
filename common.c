@@ -239,3 +239,9 @@ rc_crc32(const struct packet *pack)
 	}
 	return ~crc;
 }
+
+bool valid_ack(struct packet *p) {
+  uint32_t expected_crc = rc_crc32(p);
+  // FIXME check len is 0 ??
+  return (expected_crc == ntohl(p->crc));
+}

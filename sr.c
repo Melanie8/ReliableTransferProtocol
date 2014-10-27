@@ -33,12 +33,13 @@ enum ack_status {
 };
 enum ack_status status[MAX_WIN_SIZE];
 
-void send_mail_to_network_simulator (int id_in_window) {
+void send_mail_to_network_simulator (int id_in_window, bool last) {
   struct message *m = (struct message*) malloc(sizeof(struct message));
   m->type = SEND_MESSAGE_TYPE;
   struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
   sm->id = id_in_window;
   sm->p = packets[id_in_window];
+  sm->last = last;
   m->data = sm;
   send_mail(network_inbox, m);
   status[id_in_window] = ack_status_sent;
@@ -80,10 +81,12 @@ void check_send () {
       myperror("read");
       exit(EXIT_FAILURE); // FIXME do it ??
     }
+    bool last = false;
     if (len != PAYLOAD_SIZE) {
       // end of file
       close_fd(fd);
       fd = -1;
+      last = true;
     }
 
     memset(CUR_PACKET->payload + len, 0, PAYLOAD_SIZE-len);
@@ -95,7 +98,7 @@ void check_send () {
 
     CUR_PACKET->crc = htonl(rc_crc32(CUR_PACKET));
 
-    send_mail_to_network_simulator(CUR_IN_WINDOW);
+    send_mail_to_network_simulator(CUR_IN_WINDOW, last);
 
     cur_seq = (cur_seq + 1) % MAX_SEQ;
   }
@@ -117,12 +120,10 @@ bool selective_repeat (struct message *m) {
     }
     check_send();
   } else if (m->type == ACK_MESSAGE_TYPE) {
-    struct simulator_message *sm = m->data;
-    uint32_t expected_crc = rc_crc32(sm->p);
-    if (expected_crc == ntohl(sm->p->crc)) {
-      // FIXME check len is 0 ??
+    struct packet *p = (struct packet *) m->data;
+    if (valid_ack(p)) {
       int i = 0;
-      for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, sm->p->seq); i++) {
+      for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, p->seq); i++) {
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
       while (status[window_start] == ack_status_acked) {
@@ -142,7 +143,7 @@ bool selective_repeat (struct message *m) {
     if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
         && timeout[id] == alrm->time) {
-      send_mail_to_network_simulator(id);
+      send_mail_to_network_simulator(id, false);
     }
   }
   return true;

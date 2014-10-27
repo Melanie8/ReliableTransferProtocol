@@ -1,6 +1,7 @@
 struct simulator_message {
   int id;
   struct packet *p;
+  bool last;
 };
 
 struct network_init {

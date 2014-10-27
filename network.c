@@ -20,6 +20,8 @@ struct mailbox *acker_inbox;
 struct mailbox *sr_inbox;
 struct mailbox *timer_inbox;
 struct mailbox *network_inbox;
+int last_seq;
+bool continue_acking;
 
 // initialized to 0 (i.e. NULL)
 struct network_message *first;
@@ -94,10 +96,23 @@ bool network (struct message *m) {
     sr_inbox = init->sr_inbox;
     timer_inbox = init->timer_inbox;
     network_inbox = init->network_inbox;
+    last_seq = -1;
+    continue_acking = true;
   } else if (m->type == SEND_MESSAGE_TYPE) {
     schedule_sending((struct simulator_message *) m->data, false);
   } else if (m->type == ACK_MESSAGE_TYPE) {
-    schedule_sending((struct simulator_message *) m->data, true);
+    struct simulator_message *sm = (struct simulator_message *) m->data;
+    schedule_sending(sm, true);
+    if (valid_ack(sm->p) && last_seq != -1 && ntohs(sm->p->seq) == last_seq) {
+      continue_acking = false;
+    }
+  } else if (m->type == CONTINUE_ACKING_MESSAGE_TYPE) {
+    if (continue_acking) {
+      struct message *cont = (struct message *) malloc(sizeof(struct message));
+      cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
+      cont->data = NULL;
+      send_mail(acker_inbox, cont);
+    }
   } else {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     send_scheduled_sending();
