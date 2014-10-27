@@ -8,7 +8,7 @@ OBJ_R = receiver.o common.o error.o
 all: sender receiver
 
 send: sender
-	./sender ::1 8888 --file in
+	./sender ::1 8888 --file in --delay 1
 
 receive: receiver
 	./receiver ::1 8888 --file out
