@@ -99,6 +99,10 @@ void check_send () {
     printf("%d\n", CUR_PACKET->len);
 
     CUR_PACKET->crc = htonl(rc_crc32(CUR_PACKET));
+    printf("sr %lu %lu\n", CUR_PACKET->crc, ntohl(CUR_PACKET->crc));
+    printf("sr %d\n", CUR_PACKET->type_and_window_size);
+    printf("sr %d\n", CUR_PACKET->seq);
+    printf("sr %u\n", CUR_PACKET->len);
 
     send_mail_to_network_simulator(CUR_IN_WINDOW, last);
 

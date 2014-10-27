@@ -91,6 +91,7 @@ void check_timers () {
     struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
     alrm->id = id;
     alrm->timeout = timeout[id];
+    printf("timer timeout %d:%ld\n", id, timeout[id]);
     alrm->inbox = NULL;
     m->data = alrm;
     send_mail(inbox[id], m);
@@ -116,7 +117,7 @@ bool timer (struct message *m) {
       timeout[alrm->id] = alrm->timeout;
       printf("inbox::%p\n", inbox[alrm->id]);
       inbox[alrm->id] = alrm->inbox;
-      printf("inbox:%d:%p\n", alrm->id, inbox[alrm->id]);
+      printf("inbox:%d:%p:%ld\n", alrm->id, inbox[alrm->id], alrm->timeout);
       push_heap(alrm->id);
       int i;
       for (i = 0; i < n; i++) {

@@ -155,8 +155,12 @@ int main (int argc, char **argv) {
     
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
-    uint32_t expected_crc = rc_crc32((struct packet*) packet);
-    if (*crc == expected_crc && len <= PAYLOAD_SIZE) {
+    uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
+    // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
+    // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
+    printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
+    if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
+      printf("Accepted !\n");
       
       /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
        a receiving window size equal to zero */

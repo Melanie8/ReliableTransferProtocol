@@ -30,14 +30,21 @@ struct network_message *last;
 
 void send_scheduled_sending () {
   // avoid overhead of calling it too many times
-  int t = get_time_usec();
+  long t = get_time_usec();
+  printf("network let's go !!!\n");
+  if (first != NULL) {
+    printf("network let's go !!! %ld %ld\n", first->time, t);
+  }
   while (first != NULL && first->time <= t) {
+    printf("network let's goo !!!\n");
     if (first->ack) {
+    printf("network let's gooa !!!\n");
       struct message *m = (struct message*) malloc(sizeof(struct message));
       m->type = ACK_MESSAGE_TYPE;
       m->data = first->p;
       send_mail(sr_inbox, m);
     } else {
+      printf("network let's gooo !!!\n");
       // TODO do an agent that send because here we make the ack
       // waits while we are sending..
       if (write(sfd, first->p, PACKET_SIZE) != PACKET_SIZE) {
@@ -63,6 +70,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // that way we are also sure that they are put in order in the list
   
   nm->time = get_time_usec() + delay * MILLION;
+  printf("network wait -> %ld\n", nm->time);
   nm->p = sm->p;
   nm->ack = ack;
   nm->next = NULL;
@@ -70,6 +78,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
     assert(first == NULL);
     first = nm;
   } else {
+    assert(first != NULL);
     last->next = nm;
   }
   last = nm;
@@ -81,7 +90,6 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   alrm->id = sm->id * 3 + ack;
   alrm->timeout = nm->time;
   alrm->inbox = network_inbox;
-  printf("inbox:%p\n", network_inbox);
   m->data = alrm;
   send_mail(timer_inbox, m);
 }
