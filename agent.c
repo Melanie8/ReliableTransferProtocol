@@ -1,6 +1,8 @@
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "agent.h"
 #include "error.h"
@@ -10,7 +12,7 @@ struct agent_args {
   bool (*handler) (struct message*);
 };
 
-int agent (void *data) {
+void *agent (void *data) {
   struct agent_args *args = (struct agent_args*) data;
   struct mailbox *inbox = args->inbox;
   bool block = true;
@@ -31,6 +33,7 @@ int agent (void *data) {
       free(mail);
     }
   }
+  return NULL;
 }
 
 struct mailbox* make_agent(pthread_t *thread, bool (*handler) (struct message*)) {

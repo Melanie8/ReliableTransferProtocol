@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 
 #include "common.h"
 #include "timer.h"
@@ -77,7 +79,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // we multiply by 3 distinguish ids for timeout, acks and normal packets
   // if we previously used this id for the timer, this timer has necessarily already expired
   alrm->id = sm->id * 3 + ack;
-  alrm->time = nm->time;
+  alrm->timeout = nm->time;
   alrm->inbox = network_inbox;
   printf("inbox:%p\n", network_inbox);
   m->data = alrm;

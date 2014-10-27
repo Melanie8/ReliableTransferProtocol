@@ -7,6 +7,7 @@
 #include <semaphore.h>
 
 #include "mailbox.h"
+#include "error.h"
 
 struct letter {
   struct message *m;

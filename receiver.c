@@ -18,8 +18,9 @@
 #include <string.h>
 #include <errno.h>
 
-#include "receiver.h"
+#include "error.h"
 
+#include "receiver.h"
 
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
@@ -153,14 +154,15 @@ int main (int argc, char **argv) {
       fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
     
     /* If the CRC is not correct, the packet is dropped */
-    len = *payload_len;
+    len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) packet);
     if (*crc == expected_crc && len <= PAYLOAD_SIZE) {
       
-      /* Sanity check : the receiver only receives DATA packets with a receiving window size equal to zero */
+      /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
+       a receiving window size equal to zero */
       type = (*header >> WINDOW_SIZE);
       window = (*header & BUFFER_SIZE);
-      if (type == PTYPE_DATA && window==0) {
+      if (type == PTYPE_DATA && window==0 && len<=512) {
         
         /* A packet outside the receiving window is dropped */
         if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
