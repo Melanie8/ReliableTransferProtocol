@@ -1,4 +1,4 @@
-CC=gcc
+CC=clang
 CFLAGS=-I. -pthread -g
 # Les .h
 DEPS = common.h error.h mailbox.h agent.h timer.h network.h sr.h acker.h
