@@ -2,8 +2,9 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "error.h"
+
 #include "common.h"
+#include "error.h"
 #include "network.h"
 
 #include "acker.h"

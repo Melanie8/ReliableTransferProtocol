@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-I. -pthread -g
 # Les .h
 DEPS = common.h error.h mailbox.h agent.h timer.h network.h sr.h acker.h
-OBJ_S = sender.o common.o error.o mailbox.o agent.o timer.o network.o sr.c acker.c
+OBJ_S = sender.o common.o error.o mailbox.o agent.o timer.o network.o sr.h acker.h
 OBJ_R = receiver.o common.o error.o
 
 all: sender receiver
@@ -12,6 +12,16 @@ send: sender
 
 receive: receiver
 	./receiver :: 8888 --file out
+
+agent.o : error.h
+common.o : error.h
+mailbox.o : error.h
+timer.o : common.h
+network.o : common.h timer.h
+acker.o : common.h error.h network.h
+receiver.o : error.h common.h
+sr.o : mailbox.h common.h timer.h network.h error.h
+sender.o : error.h common.h agent.h acker.h network.h sr.h timer.h
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)

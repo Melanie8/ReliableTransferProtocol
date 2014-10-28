@@ -5,12 +5,16 @@
  * October 2014
  */
 
+#ifndef COMMON_H
+#define COMMON_H
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
 
 #define PACKET_SIZE 520
 #define PAYLOAD_SIZE 512
+#define CRC_SIZE 4
 #define SEQNUM_SIZE 8
 // FIXME pareil que MAX_SEQ
 #define N 256           // pow(2,SEQNUM_SIZE)
@@ -51,3 +55,5 @@ void close_fd (int fd);
 /* */
 uint32_t rc_crc32(const struct packet *pack);
 bool valid_ack(struct packet *p);
+
+#endif
