@@ -6,13 +6,13 @@
 struct mailbox;
 
 enum message_type {
-  STOP_MESSAGE_TYPE,
-  ALARM_MESSAGE_TYPE,
-  ACK_MESSAGE_TYPE,
-  TIMEOUT_MESSAGE_TYPE,
-  SEND_MESSAGE_TYPE,
-  CONTINUE_ACKING_MESSAGE_TYPE,
-  INIT_MESSAGE_TYPE
+  STOP_MESSAGE_TYPE,              // 0
+  ALARM_MESSAGE_TYPE,             // 1
+  ACK_MESSAGE_TYPE,               // 2
+  TIMEOUT_MESSAGE_TYPE,           // 3
+  SEND_MESSAGE_TYPE,              // 4
+  CONTINUE_ACKING_MESSAGE_TYPE,   // 5
+  INIT_MESSAGE_TYPE               // 6
 };
 
 struct message {

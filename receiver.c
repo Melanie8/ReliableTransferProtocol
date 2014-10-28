@@ -205,8 +205,8 @@ int main (int argc, char **argv) {
         /* An acknowledgement is sent */
         *seq_num = lastack;
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
-        *crc = htonl(rc_crc32((struct packet*) packet));
         memset(payload, 0, PAYLOAD_SIZE);
+        *crc = htonl(rc_crc32((struct packet*) &packet[0]));
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }
