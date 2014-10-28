@@ -10,3 +10,6 @@ in
 out
 *.pdf
 *.swp
+*.out
+*.synctex.gz
+*.toc

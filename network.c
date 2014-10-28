@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <assert.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -15,6 +16,8 @@ struct network_message {
   bool ack;
 };
 
+int sber;
+int splr;
 int sfd;
 int delay;
 struct mailbox *acker_inbox;
@@ -42,7 +45,7 @@ void send_scheduled_sending () {
       struct message *m = (struct message*) malloc(sizeof(struct message));
       m->type = ACK_MESSAGE_TYPE;
       m->data = first->p;
-      printf("network send    %d to sr\n", m->type);
+      printf("network send     %d to sr\n", m->type);
       send_mail(sr_inbox, m);
     } else {
       //printf("network let's gooo !!!\n");
@@ -70,7 +73,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // --> to put in report
   // that way we are also sure that they are put in order in the list
   
-  nm->time = get_time_usec() + delay * MILLION;
+  nm->time = get_time_usec() + (long) delay;
   //printf("network wait -> %ld\n", nm->time);
   nm->p = sm->p;
   nm->ack = ack;
@@ -92,7 +95,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   alrm->timeout = nm->time;
   alrm->inbox = network_inbox;
   m->data = alrm;
-  printf("network send    %d to timer\n", m->type);
+  printf("network send     %d to timer\n", m->type);
   send_mail(timer_inbox, m);
 }
 
@@ -101,6 +104,8 @@ bool network (struct message *m) {
   printf("network receives %d\n", m->type);
   if (m->type == INIT_MESSAGE_TYPE) {
     struct network_init *init = (struct network_init *) m->data;
+    sber = init->sber;
+    splr = init->splr;
     sfd = init->sfd;
     delay = init->delay;
     acker_inbox = init->acker_inbox;
@@ -109,13 +114,19 @@ bool network (struct message *m) {
     network_inbox = init->network_inbox;
     last_seq = -1;
     continue_acking = true;
+    srand(time(NULL));
   } else if (m->type == SEND_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     if (sm->last) {
       last_seq = sm->p->seq;
-      printf("last_ack : %d\n", last_seq);
+      printf("last_seq : %d\n", last_seq);
     }
-    schedule_sending(sm, false);
+    if ((rand() % 1000) >= splr) {
+      if ((rand() % 1000) < sber) {
+        sm->p->payload[0] ^= 0xff;
+      }
+      schedule_sending(sm, false);
+    }
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     schedule_sending(sm, true);

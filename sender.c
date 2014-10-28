@@ -102,6 +102,8 @@ int main (int argc, char **argv) {
   struct network_init *network_i = (struct network_init *) malloc(sizeof(struct network_init));
   struct timer_init *timer_i = (struct timer_init *) malloc(sizeof(struct timer_init));
   struct acker_init *acker_i = (struct acker_init *) malloc(sizeof(struct acker_init));
+  network_i->sber = sber;
+  network_i->splr = splr;
   network_i->sfd = sfd;
   network_i->delay = delay;
   network_i->acker_inbox = acker_inbox;
