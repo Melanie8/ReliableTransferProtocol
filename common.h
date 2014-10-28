@@ -5,8 +5,8 @@
  * October 2014
  */
 
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <stdbool.h>
 #include <stdint.h>
