@@ -1,3 +1,5 @@
 - Se mettre d'accord avec tous les define
 - utiliser struct packet
 - gérer le cas où le ack du dernier packet est perdu
+- closer tout ce qui faut : file, socket
+- faire tous les free
