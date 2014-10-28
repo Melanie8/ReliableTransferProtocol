@@ -31,6 +31,7 @@ uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
 int lastack;                       // sequence number of the last acknowledged packet
+int start_window_seqnum;            // a quel sequence number correspond le début de ma window
 char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
@@ -42,6 +43,7 @@ int main (int argc, char **argv) {
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
   lastack = N-1;
+  start_window_seqnum = 0;
   real_window_size = BUFFER_SIZE;
   int i;
   for (i=0; i<BUFFER_SIZE; i++) {
@@ -175,12 +177,12 @@ int main (int argc, char **argv) {
         printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
-        printf("%d >= %d && %d <= %d\n", *seq_num, ((lastack+1) %N), *seq_num, ((lastack+real_window_size) %N));
+        printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum+1)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
         // FIXME FAUX, utilise between_mod comme j'ai fait pour sr.c
-        if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
+        if (between_mod((start_window_seqnum+1)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
-          char slot_number = (*seq_num-lastack-1);
+          int slot_number = (*seq_num - start_window_seqnum);
           printf("slot_number:%d\n", slot_number);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
@@ -199,7 +201,8 @@ int main (int argc, char **argv) {
             }
             buffer[i].received = false;
           }
-          lastack = (lastack+i)%N;
+          lastack = (lastack+i)%MAX_WIN_SIZE;
+          start_window_seqnum = (start_window_seqnum+i)%(N-1);
         }
 
         /* An acknowledgement is sent */
