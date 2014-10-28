@@ -19,7 +19,7 @@
 // FIXME pareil que MAX_SEQ
 #define N 256           // pow(2,SEQNUM_SIZE)
 #define WINDOW_SIZE 5
-#define BUFFER_SIZE 31  // pow(2,WINDOW_SIZE)-1
+#define BUFFER_SIZE ((1 << WINDOW_SIZE) - 1)
 /* CA SERAIT PEUT-ETRE PAS MAL DE FAIRE DES DEFINE POUR LES TAILLES DE CHAQUE CHAMP EN FAIT POUR QUE CA SOIT PLUS GENERIQUE */
 
 #define PTYPE_DATA 1
@@ -28,7 +28,7 @@
 #define MIN(a,b) ((a) < (b) ?  (a) : (b))
 #define MAX(a,b) ((a) < (b) ?  (b) : (a))
 #define MAX_WIN_SIZE 31
-#define MAX_SEQ (1 << 8)
+#define MAX_SEQ (1 << SEQNUM_SIZE)
 
 /* Reads all the arguments in argv and sets sber, splr, delay,
  * hostname and ports to the corresponding values.

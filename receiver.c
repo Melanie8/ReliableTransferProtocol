@@ -207,7 +207,7 @@ int main (int argc, char **argv) {
 
         /* An acknowledgement is sent */
         *seq_num = lastack;
-        header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
+        header[0] = (PTYPE_ACK << WINDOW_SIZE) | BUFFER_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(rc_crc32((struct packet*) &packet[0]));
         printf("%d %u\n", *seq_num, crc);

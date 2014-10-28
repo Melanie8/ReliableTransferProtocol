@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+#include <assert.h>
 
 #include "mailbox.h"
 #include "error.h"
@@ -127,6 +128,9 @@ struct message *get_mail (struct mailbox *inbox, bool block) {
   struct letter *l = inbox->next;
   struct message *m = l->m;
   inbox->next = l->next;
+  if (inbox->next == NULL) {
+    inbox->last = NULL;
+  }
   free(l);
   err = pthread_mutex_unlock(&inbox->lock);
   if (err != 0) {
@@ -153,9 +157,15 @@ void send_mail (struct mailbox *inbox, struct message *m) {
     //return 1;
     return;
   }
-  new_l->next = inbox->next;
+  new_l->next = NULL;
+  if (inbox->last == NULL) {
+    assert(inbox->next == NULL);
+    inbox->next = new_l;
+  } else {
+    inbox->last->next = new_l;
+  }
+  inbox->last = new_l;
   //new_first->next = q->next;
-  inbox->next = new_l;
   err = pthread_mutex_unlock(&inbox->lock);
   if (err != 0) {
     myerror(err, "pthread_mutex_unlock");
