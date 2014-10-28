@@ -34,7 +34,7 @@ char lastack;                       // sequence number of the last acknowledged 
 char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
-  
+
   /* Initialisation of the variables */
   header = (char *) packet;
   seq_num = (char *) (header + 1);
@@ -47,7 +47,7 @@ int main (int argc, char **argv) {
   for (i=0; i<BUFFER_SIZE; i++) {
     buffer[i].received = false;
   }
-  
+
   char *filename = NULL;
   char *hostname = NULL;
   char *port = NULL;
@@ -132,19 +132,19 @@ int main (int argc, char **argv) {
   char type, window;
 
   peer_addr_len = sizeof(struct sockaddr_storage);
-  
-  
+
+
   /* Until we reach the end of the transmission */
   while (len == PAYLOAD_SIZE) {
-	printf("len : %d/n", len);
-    
+	printf("len : %d\n", len);
+
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
     printf("nread : %d/n", nread);                 
     if (nread == -1)
       continue; //Ignore failed request
-    
+
     /* Identification of the host name of the sender and the service name associated with its port number */
     char host[NI_MAXHOST], service[NI_MAXSERV];
     s = getnameinfo((struct sockaddr *) &peer_addr,
@@ -155,38 +155,44 @@ int main (int argc, char **argv) {
              nread, host, service);
     else
       fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
-    
+
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
-    uint32_t expected_crc = rc_crc32((const struct packet*) &packet[0]);
+    uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
+    
     // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
       printf("Accepted !\n");
-      
+
       /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
        a receiving window size equal to zero */
       type = (*header >> WINDOW_SIZE);
       window = (*header & BUFFER_SIZE);
+      printf("type:%d==%d window==%d len==%d\n", type, PTYPE_DATA, window, len);
       if (type == PTYPE_DATA && window==0 && len<=512) {
         printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
+        printf("%d >= %d && %d <= %d\n", *seq_num, ((lastack+1) %N), *seq_num, ((lastack+real_window_size) %N));
+        // FIXME FAUX, utilise between_mod comme j'ai fait pour sr.c
         if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
           char slot_number = (*seq_num-lastack-1);
+          printf("slot_number:%d\n", slot_number);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
-          
+
           /* All consecutive packets starting at lastack are removed from the receive buffer.
            * The payload of these packets are delivered to the user.
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
+            // FIXME, (i + 1) % N non ?
             printf("i = %d!\n", i);
-            len = (uint16_t) (buffer[i].data[2]);
+            len = ntohs(*((uint16_t*)(buffer[i].data+2)));
             printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
             if (write(fd, payload, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
@@ -195,12 +201,12 @@ int main (int argc, char **argv) {
           }
           lastack = (lastack+i+1)%N;
         }
-        
+
         /* An acknowledgement is sent */
         *seq_num = lastack;
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
-        *crc = htonl(rc_crc32((struct packet*) packet));
         memset(payload, 0, PAYLOAD_SIZE);
+        *crc = htonl(rc_crc32((struct packet*) &packet[0]));
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }

@@ -16,6 +16,7 @@
 #define PAYLOAD_SIZE 512
 #define CRC_SIZE 4
 #define SEQNUM_SIZE 8
+// FIXME pareil que MAX_SEQ
 #define N 256           // pow(2,SEQNUM_SIZE)
 #define WINDOW_SIZE 5
 #define BUFFER_SIZE 31  // pow(2,WINDOW_SIZE)-1

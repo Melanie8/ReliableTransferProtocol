@@ -54,7 +54,7 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   alrm->timeout = get_time_usec() + delay * 3 * MILLION;
   timeout[id_in_window] = alrm->timeout;
   alrm->inbox = sr_inbox;
-  printf("inbox:%p\n", network_inbox);
+  //printf("inbox:%p\n", network_inbox);
   m->data = alrm;
   send_mail(timer_inbox, m);
 }
@@ -73,13 +73,10 @@ bool between_mod (int a, int b, int m) {
 }
 
 void check_send () {
-  printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
+  //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
   while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, CUR_IN_WINDOW)) {
-    printf("alloc\n");
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
-    printf("read\n");
     len = read(fd, CUR_PACKET->payload, len);
-    printf("read:%zd\n", len);
     if (len < 0) {
       myperror("read");
       exit(EXIT_FAILURE); // FIXME do it ??
@@ -87,6 +84,7 @@ void check_send () {
     bool last = false;
     if (len != PAYLOAD_SIZE) {
       // end of file
+      printf("sr    end of file\n");
       close_fd(fd);
       fd = -1;
       last = true;
@@ -97,14 +95,14 @@ void check_send () {
     CUR_PACKET->type_and_window_size = (PTYPE_DATA << 5);
     CUR_PACKET->seq = cur_seq;
     CUR_PACKET->len = htons(len);
-    printf("%d\n", CUR_PACKET->len);
+    //printf("%d\n", CUR_PACKET->len);
 
     //CUR_PACKET->crc = htonl((uint32_t) crc32(0, (const Bytef *)CUR_PACKET, PACKET_SIZE-CRC_SIZE));
     CUR_PACKET->crc = htonl(rc_crc32(CUR_PACKET));
-    printf("sr %lu %lu\n", CUR_PACKET->crc, ntohl(CUR_PACKET->crc));
-    printf("sr %d\n", CUR_PACKET->type_and_window_size);
-    printf("sr %d\n", CUR_PACKET->seq);
-    printf("sr %u\n", CUR_PACKET->len);
+    //printf("sr %lu %lu\n", CUR_PACKET->crc, ntohl(CUR_PACKET->crc));
+    //printf("sr %d\n", CUR_PACKET->type_and_window_size);
+    //printf("sr %d\n", CUR_PACKET->seq);
+    //printf("sr %u\n", CUR_PACKET->len);
 
     send_mail_to_network_simulator(CUR_IN_WINDOW, last);
 
@@ -130,6 +128,7 @@ bool selective_repeat (struct message *m) {
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) m->data;
     if (valid_ack(p)) {
+      printf("sr    valid ack seq:%d\n", ntohs(p->seq));
       int i = 0;
       for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, p->seq); i++) {
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
@@ -141,13 +140,15 @@ bool selective_repeat (struct message *m) {
         timeout[window_start] = -1;
         window_start = (window_start + 1) % MAX_SEQ;
       }
+    } else {
+      printf("sr  invalid ack seq:%d\n", ntohs(p->seq));
     }
     check_send();
   } else {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     struct alarm *alrm = m->data;
     int id = alrm->id / 3;
-    printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->timeout);
+    //printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->timeout);
     if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
         && timeout[id] == alrm->timeout) {
