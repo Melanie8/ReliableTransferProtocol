@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "error.h"
 #include "common.h"
@@ -121,6 +122,8 @@ int main (int argc, char **argv) {
   send_init_message(timer_inbox, timer_i);
   send_init_message(network_inbox, network_i);
   send_init_message(sr_inbox, sr_i);
+  // nobody sends it message before he asks
+  send_init_message(acker_inbox, acker_i);
 
   pthread_join(sr_thread, NULL);
   printf("sr joined\n");

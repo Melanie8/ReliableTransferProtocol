@@ -23,6 +23,7 @@
 #include "common.h"
 #include "error.h"
 
+
 //     _    ____   ____ ____
 //    / \  |  _ \ / ___/ ___|
 //   / _ \ | |_) | |  _\___ \
@@ -178,7 +179,7 @@ int get_fd (const char *filename, bool write) {
   } else {
     int fd = 0;
     if (write) {
-      fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC);
+      fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     } else {
       fd = open(filename, O_RDONLY);
     }
@@ -204,8 +205,13 @@ void close_fd (int fd) {
 uint32_t
 rc_crc32(const struct packet *pack)
 {
+    printf("common %d\n", pack->type_and_window_size);
+    printf("common %d\n", pack->seq);
+    printf("common %u\n", pack->len);
+    printf("common %s\n", pack->payload);
+
 	uint32_t crc = 0;
-	const char *buf = (const char *)(&pack);
+	const char *buf = (const char *)(pack);
 	size_t len = 4 + PAYLOAD_SIZE;
 	static uint32_t table[256];
 	static int have_table = 0;

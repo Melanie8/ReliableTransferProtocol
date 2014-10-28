@@ -2,8 +2,9 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "error.h"
+
 #include "common.h"
+#include "error.h"
 #include "network.h"
 
 #include "acker.h"
@@ -12,11 +13,19 @@ struct mailbox *network_inbox;
 int sfd;
 int ack_id;
 
+void ask_if_cont () {
+  struct message *cont = (struct message*) malloc(sizeof(struct message));
+  cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
+  cont->data = NULL;
+  send_mail(network_inbox, cont);
+}
+
 bool acker (struct message *m) {
   if (m->type == INIT_MESSAGE_TYPE) {
-    struct acker_init *init = (struct acker_init *) malloc(sizeof(struct acker_init));
+    struct acker_init *init = m->data;
     network_inbox = init->network_inbox;
     sfd = init->sfd;
+    ask_if_cont();
   } else {
     assert(m->type == CONTINUE_ACKING_MESSAGE_TYPE);
     // TODO do also non-block
@@ -34,11 +43,7 @@ bool acker (struct message *m) {
     m->type = ACK_MESSAGE_TYPE;
     m->data = sm;
     send_mail(network_inbox, m);
-
-    struct message *cont = (struct message*) malloc(sizeof(struct message));
-    cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
-    cont->data = NULL;
-    send_mail(network_inbox, cont);
+    ask_if_cont();
   }
   return true;
 }

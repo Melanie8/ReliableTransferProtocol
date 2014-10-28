@@ -17,10 +17,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+//#include <zlib.h>
 
 #include "error.h"
-
 #include "receiver.h"
+#include "common.h"
 
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
@@ -135,10 +136,12 @@ int main (int argc, char **argv) {
   
   /* Until we reach the end of the transmission */
   while (len == PAYLOAD_SIZE) {
+	printf("len : %d/n", len);
     
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
+    printf("nread : %d/n", nread);                 
     if (nread == -1)
       continue; //Ignore failed request
     
@@ -155,18 +158,23 @@ int main (int argc, char **argv) {
     
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
-    uint32_t expected_crc = rc_crc32((struct packet*) packet);
-    if (*crc == expected_crc && len <= PAYLOAD_SIZE) {
+    uint32_t expected_crc = rc_crc32((const struct packet*) &packet[0]);
+    // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
+    // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
+    printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
+    if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
+      printf("Accepted !\n");
       
       /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
        a receiving window size equal to zero */
       type = (*header >> WINDOW_SIZE);
       window = (*header & BUFFER_SIZE);
       if (type == PTYPE_DATA && window==0 && len<=512) {
+        printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
         if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
-          
+          printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
           char slot_number = (*seq_num-lastack-1);
           buffer[slot_number].received = true;
@@ -177,8 +185,9 @@ int main (int argc, char **argv) {
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
-            len = *((buffer[i].data)+2);
-            printf("%u\n", (uint32_t) len);
+            printf("i = %d!\n", i);
+            len = (uint16_t) (buffer[i].data[2]);
+            printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
             if (write(fd, payload, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
             }
@@ -190,11 +199,12 @@ int main (int argc, char **argv) {
         /* An acknowledgement is sent */
         *seq_num = lastack;
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
-        *crc = rc_crc32((struct packet*) packet);
+        *crc = htonl(rc_crc32((struct packet*) packet));
+        memset(payload, 0, PAYLOAD_SIZE);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }
-
+        printf("Ack sent !\n");
       }
     }
   }
