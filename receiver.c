@@ -170,10 +170,11 @@ int main (int argc, char **argv) {
       type = (*header >> WINDOW_SIZE);
       window = (*header & BUFFER_SIZE);
       if (type == PTYPE_DATA && window==0 && len<=512) {
+        printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
         if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
-          
+          printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
           char slot_number = (*seq_num-lastack-1);
           buffer[slot_number].received = true;
@@ -184,8 +185,9 @@ int main (int argc, char **argv) {
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
-            len = *((buffer[i].data)+2);
-            printf("%u\n", (uint32_t) len);
+            printf("i = %d!\n", i);
+            len = (uint16_t) (buffer[i].data[2]);
+            printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
             if (write(fd, payload, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
             }
@@ -202,7 +204,7 @@ int main (int argc, char **argv) {
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }
-
+        printf("Ack sent !\n");
       }
     }
   }
