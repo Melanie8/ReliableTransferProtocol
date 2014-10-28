@@ -1,0 +1,133 @@
+%--------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%--------------------------------------------------------------------------
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[francais]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage[left=2cm,right=2cm,top=2.2cm,bottom=2.2cm]{geometry}
+
+\usepackage{fancyhdr} % Required for custom headers
+\usepackage{lastpage} % Required to determine the last page for the footer
+\usepackage{extramarks} % Required for headers and footers
+\usepackage[usenames,dvipsnames]{color} % Required for custom colors
+\usepackage{graphicx} % Required to insert images
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings} % Required for insertion of code
+\usepackage{courier} % Required for the courier font
+\usepackage{verbatim}
+\usepackage{multirow}
+\usepackage{eurosym}
+\usepackage[squaren,Gray]{SIunits}
+\usepackage{url}
+\usepackage{hyperref}
+
+% Margins
+%\topmargin=-0.45in
+%\textwidth=6.5in
+%\textheight=9.8in
+\headsep=0.25in
+
+% Set up the header and footer
+%\pagestyle{fancy}
+%\rhead{\firstxmark} % Top right header
+%\lfoot{\lastxmark} % Bottom left footer
+%\cfoot{} % Bottom center footer
+%\rfoot{Page\ \thepage\ /\ \protect\pageref{LastPage}} % Bottom right footer
+%\renewcommand\headrulewidth{0.3pt} % Size of the header rule
+%\renewcommand\footrulewidth{0.3pt} % Size of the footer rule
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+%--------------------------------------------------------------------------
+%	CODE INCLUSION CONFIGURATION
+%--------------------------------------------------------------------------
+
+\definecolor{MyDarkGreen}{rgb}{0.0,0.4,0.0} % This is the color used for comments
+\lstloadlanguages{C} % Load C syntax for listings, for a list of other languages supported see: ftp://ftp.tex.ac.uk/tex-archive/macros/latex/contrib/listings/listings.pdf
+
+\begin{document}
+	
+%--------------------------------------------------------------------------
+%	TITLE PAGE
+%--------------------------------------------------------------------------
+\begin{titlepage}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} % Defines a new command for the horizontal lines, change thickness here
+\centering % Center everything on the page
+ 
+%	HEADING SECTIONS
+\null
+\vspace{1cm}
+\textsc{\Large Université Catholique de Louvain}\\[1cm] % Name of your university/college
+\textsc{\large LINGI2141 \\[0.3cm] Computer Networks : Information transfert}\\[0.5cm] % Major heading such as course name
+%\textsc{\large Minor Heading}\\[0.5cm] % Minor heading such as course title
+
+%	TITLE SECTION
+
+\HRule \\[0.4cm]
+{ \LARGE \bfseries Project 1~: Reliable Transfer Protocol\\[0.4cm] % Title of your document
+\large \bfseries Report} \\[0.4cm]
+
+\HRule \\[0.5cm]
+ 
+\begin{figure}[!h]
+	\begin{center}
+	%2048 × 1364
+		\includegraphics[width=10cm]{photos/cover.jpeg}
+	\end{center}
+\end{figure}
+
+%	AUTHOR SECTION
+
+\large
+\begin{centering}
+\end{centering}
+{\begin{tabular}{lll}
+\textsc{Legat} & Benoît & 4896 11 00\\
+\textsc{Sedda} & Mélanie & 2246 11 00\\
+\end{tabular}}
+\\[1cm]
+
+\normalsize
+{\begin{tabular}{ll}
+\textit{Teacher} : & Olivier Bonaventure\\
+\textit{Assistants} : & Juan Antonio Cordero Fuertes\\
+& Matthieu Baerts\\
+& Raphael Bauduin\\
+& David Lebrun\\
+& Olivier Tilmans
+\end{tabular}}
+\\[1cm]
+
+%	DATE SECTION
+
+{\normalsize \today} % Date, change the \today to a set date if you want to be precise
+
+\newpage
+
+\end{titlepage}
+
+%--------------------------------------------------------------------------
+%	TABLE OF CONTENTS
+%--------------------------------------------------------------------------
+
+\pagenumbering{gobble}
+\clearpage
+\thispagestyle{empty}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+%--------------------------------------------------------------------------
+%	CONTENT
+%--------------------------------------------------------------------------
+
+\section{Introduction}
+    
+\end{document}
