@@ -7,6 +7,8 @@ struct simulator_message {
 };
 
 struct network_init {
+  int sber;
+  int splr;
   int sfd;
   int delay;
   struct mailbox *acker_inbox;

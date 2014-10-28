@@ -91,10 +91,10 @@ void check_timers () {
     struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
     alrm->id = id;
     alrm->timeout = timeout[id];
-    printf("timer   timeout %d:%ld\n", id, timeout[id]);
+    printf("timer   timeout  %d:%ld\n", id, timeout[id]);
     alrm->inbox = NULL;
     m->data = alrm;
-    printf("timer   send    %d to ?\n", m->type);
+    printf("timer   send     %d to ?\n", m->type);
     send_mail(inbox[id], m);
     timeout[id] = 0;
     inbox[id] = NULL;
@@ -130,7 +130,7 @@ bool timer (struct message *m) {
   }
   check_timers();
   // the minimum time that can be asked is MIN(delay*MILLION, 3*delay*MILLION) = delay*MILLION
-  int time_to_sleep = delay * MILLION;
+  int time_to_sleep = delay;
   if (n > 0) {
     time_to_sleep = MIN(time_to_sleep, timeout[top_heap()]);
   }

@@ -129,7 +129,8 @@ void read_args (int argc, char **argv, char **filename, int *sber, int *splr, in
 
       case 'd':
         check_asked(delay, "delay");
-        *delay = check_int(optarg, 0, INT_MAX, "delay");
+        *delay = check_int(optarg, 0, INT_MAX/1000, "delay");
+        *delay *= 1000;
         break;
 
       case '?':

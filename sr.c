@@ -51,7 +51,7 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   m->type = ALARM_MESSAGE_TYPE;
   struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
   alrm->id = id_in_window * 3 + 2;
-  alrm->timeout = get_time_usec() + delay * 3 * MILLION;
+  alrm->timeout = get_time_usec() + ((long) delay) * 3;
   timeout[id_in_window] = alrm->timeout;
   alrm->inbox = sr_inbox;
   //printf("inbox:%p\n", network_inbox);
@@ -84,7 +84,7 @@ void check_send () {
     bool last = false;
     if (len != PAYLOAD_SIZE) {
       // end of file
-      printf("sr    end of file\n");
+      printf("sr      end of file\n");
       close_fd(fd);
       fd = -1;
       last = true;
@@ -128,7 +128,7 @@ void check_send () {
 }
 
 bool selective_repeat (struct message *m) {
-  printf("sr receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
+  printf("sr      receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
   if (m->type == INIT_MESSAGE_TYPE) {
     struct sr_init *init_data = (struct sr_init *) m->data;
     fd = init_data->fd;
@@ -169,6 +169,7 @@ bool selective_repeat (struct message *m) {
     if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
         && timeout[id] == alrm->timeout) {
+      // last_seq has already been registered
       send_mail_to_network_simulator(id, false);
     }
   }
