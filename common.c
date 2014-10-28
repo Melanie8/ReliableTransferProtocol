@@ -204,13 +204,13 @@ void close_fd (int fd) {
 uint32_t
 rc_crc32(const struct packet *pack)
 {
-    printf("common %d\n", pack->type_and_window_size);
-    printf("common %d\n", pack->seq);
-    printf("common %u\n", pack->len);
+    printf("common typ %d\n", pack->type_and_window_size);
+    printf("common seq %d\n", pack->seq);
+    printf("common len %u\n", ntohs(pack->len));
     printf("common %s\n", pack->payload);
 
 	uint32_t crc = 0;
-	const char *buf = (const char *)(&pack);
+	const char *buf = (const char *)(pack);
 	size_t len = 4 + PAYLOAD_SIZE;
 	static uint32_t table[256];
 	static int have_table = 0;
