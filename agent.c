@@ -23,7 +23,7 @@ void *agent (void *data) {
       stop = true;
     } else {
       if (panic) break;
-      printf("%p %d\n", mail, block);
+      //printf("%p %d\n", mail, block);
       block = args->handler(mail);
     }
     if (mail != NULL) {

@@ -30,7 +30,7 @@ bool acker (struct message *m) {
     assert(m->type == CONTINUE_ACKING_MESSAGE_TYPE);
     // TODO do also non-block
     struct packet *p = (struct packet *) malloc(sizeof(struct packet));
-    ssize_t nread = read(sfd, p, PAYLOAD_SIZE);
+    ssize_t nread = read(sfd, p, PACKET_SIZE);
     if (nread == -1) {
       myperror("read");
       exit(EXIT_FAILURE);
@@ -38,7 +38,8 @@ bool acker (struct message *m) {
     struct message *m = (struct message*) malloc(sizeof(struct message));
     struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
     sm->p = p;
-    sm->id = (ack_id + 1) % MAX_WIN_SIZE;
+    sm->id = ack_id;
+    ack_id = (ack_id + 1) % MAX_WIN_SIZE;
     sm->last = false; // nonsense here
     m->type = ACK_MESSAGE_TYPE;
     m->data = sm;

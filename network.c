@@ -110,21 +110,29 @@ bool network (struct message *m) {
     last_seq = -1;
     continue_acking = true;
   } else if (m->type == SEND_MESSAGE_TYPE) {
-    schedule_sending((struct simulator_message *) m->data, false);
+    struct simulator_message *sm = (struct simulator_message *) m->data;
+    if (sm->last) {
+      last_seq = sm->p->seq;
+      printf("last_ack : %d\n", last_seq);
+    }
+    schedule_sending(sm, false);
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     schedule_sending(sm, true);
-    if (valid_ack(sm->p) && last_seq != -1 && ntohs(sm->p->seq) == last_seq) {
+    printf("last_ack : %d cur_ack : %d\n", last_seq, sm->p->seq);
+    if (valid_ack(sm->p) && last_seq != -1 && sm->p->seq == last_seq) {
       continue_acking = false;
     }
   } else if (m->type == CONTINUE_ACKING_MESSAGE_TYPE) {
+    struct message *cont = (struct message *) malloc(sizeof(struct message));
     if (continue_acking) {
-      struct message *cont = (struct message *) malloc(sizeof(struct message));
       cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
-      cont->data = NULL;
-      printf("network send    %d to acker\n", m->type);
-      send_mail(acker_inbox, cont);
+    } else {
+      cont->type = STOP_MESSAGE_TYPE;
     }
+    cont->data = NULL;
+    printf("network sends    %d to acker\n", m->type);
+    send_mail(acker_inbox, cont);
   } else {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     send_scheduled_sending();

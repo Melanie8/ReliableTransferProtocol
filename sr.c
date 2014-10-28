@@ -108,6 +108,23 @@ void check_send () {
 
     cur_seq = (cur_seq + 1) % MAX_SEQ;
   }
+  if (fd < 0 && status[start_in_window] == ack_status_none) {
+    struct message *m_network = (struct message *) malloc(sizeof(struct message));
+    struct message *m_timer = (struct message *) malloc(sizeof(struct message));
+    struct message *m_self = (struct message *) malloc(sizeof(struct message));
+    m_network->type = STOP_MESSAGE_TYPE;
+    m_network->data = NULL;
+    m_timer->type = STOP_MESSAGE_TYPE;
+    m_timer->data = NULL;
+    m_self->type = STOP_MESSAGE_TYPE;
+    m_self->data = NULL;
+    printf("sr      sends    %d to network\n", m_network->type);
+    send_mail(network_inbox, m_network);
+    printf("sr      sends    %d to timer\n", m_timer->type);
+    send_mail(timer_inbox, m_timer);
+    printf("sr      sends    %d to sr\n", m_self->type);
+    send_mail(sr_inbox, m_self);
+  }
 }
 
 bool selective_repeat (struct message *m) {

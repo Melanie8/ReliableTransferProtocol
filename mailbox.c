@@ -16,6 +16,7 @@ struct letter {
 
 struct mailbox {
   struct letter *next;
+  struct letter *last;
   pthread_mutex_t lock;
   sem_t *size;
 };
@@ -35,6 +36,7 @@ struct mailbox *new_mailbox () {
   }
 #endif
   inbox->next = NULL;
+  inbox->last = NULL;
   int err = pthread_mutex_init(&inbox->lock, NULL);
   if (err != 0) {
     // Normally pthread_mutex_init always returns 0 but

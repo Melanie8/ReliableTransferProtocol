@@ -94,7 +94,7 @@ void check_timers () {
     printf("timer   timeout %d:%ld\n", id, timeout[id]);
     alrm->inbox = NULL;
     m->data = alrm;
-    printf("timer send    %d to ?\n", m->type);
+    printf("timer   send    %d to ?\n", m->type);
     send_mail(inbox[id], m);
     timeout[id] = 0;
     inbox[id] = NULL;
@@ -121,9 +121,9 @@ bool timer (struct message *m) {
       //printf("inbox:%d:%p:%ld\n", alrm->id, inbox[alrm->id], alrm->timeout);
       push_heap(alrm->id);
       int i;
-      for (i = 0; i < n; i++) {
-        //printf("%d\n", key[i]);
-      }
+      /*for (i = 0; i < n; i++) {
+        printf("%d\n", key[i]);
+      }*/
     }
   } else {
     printf("timer   receives NULL\n");

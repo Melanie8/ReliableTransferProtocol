@@ -30,7 +30,7 @@ char *header, *seq_num, *payload;   // pointers to the different areas of the pa
 uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
-char lastack;                       // sequence number of the last acknowledged packet
+int lastack;                       // sequence number of the last acknowledged packet
 char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
@@ -199,7 +199,7 @@ int main (int argc, char **argv) {
             }
             buffer[i].received = false;
           }
-          lastack = (lastack+i+1)%N;
+          lastack = (lastack+i)%N;
         }
 
         /* An acknowledgement is sent */
@@ -207,6 +207,7 @@ int main (int argc, char **argv) {
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(rc_crc32((struct packet*) &packet[0]));
+        printf("%d %u\n", *seq_num, crc);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }
