@@ -17,10 +17,11 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+//#include <zlib.h>
 
 #include "error.h"
-
 #include "receiver.h"
+#include "common.h"
 
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
@@ -135,10 +136,12 @@ int main (int argc, char **argv) {
   
   /* Until we reach the end of the transmission */
   while (len == PAYLOAD_SIZE) {
+	printf("len : %d/n", len);
     
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
+    printf("nread : %d/n", nread);                 
     if (nread == -1)
       continue; //Ignore failed request
     
@@ -155,7 +158,7 @@ int main (int argc, char **argv) {
     
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
-    uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
+    uint32_t expected_crc = rc_crc32((const struct packet*) &packet[0]);
     // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
@@ -194,7 +197,8 @@ int main (int argc, char **argv) {
         /* An acknowledgement is sent */
         *seq_num = lastack;
         header[0] = (PTYPE_ACK << real_window_size) + BUFFER_SIZE;
-        *crc = rc_crc32((struct packet*) packet);
+        *crc = htonl(rc_crc32((struct packet*) packet));
+        memset(payload, 0, PAYLOAD_SIZE);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }

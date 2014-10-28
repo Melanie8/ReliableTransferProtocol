@@ -4,6 +4,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+//#include <zlib.h>
 
 #include "mailbox.h"
 #include "common.h"
@@ -98,6 +99,7 @@ void check_send () {
     CUR_PACKET->len = htons(len);
     printf("%d\n", CUR_PACKET->len);
 
+    //CUR_PACKET->crc = htonl((uint32_t) crc32(0, (const Bytef *)CUR_PACKET, PACKET_SIZE-CRC_SIZE));
     CUR_PACKET->crc = htonl(rc_crc32(CUR_PACKET));
     printf("sr %lu %lu\n", CUR_PACKET->crc, ntohl(CUR_PACKET->crc));
     printf("sr %d\n", CUR_PACKET->type_and_window_size);

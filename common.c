@@ -23,6 +23,7 @@
 #include "common.h"
 #include "error.h"
 
+
 //     _    ____   ____ ____
 //    / \  |  _ \ / ___/ ___|
 //   / _ \ | |_) | |  _\___ \
@@ -210,7 +211,7 @@ rc_crc32(const struct packet *pack)
     printf("common %s\n", pack->payload);
 
 	uint32_t crc = 0;
-	const char *buf = (const char *)(&pack);
+	const char *buf = (const char *)(pack);
 	size_t len = 4 + PAYLOAD_SIZE;
 	static uint32_t table[256];
 	static int have_table = 0;
@@ -246,7 +247,7 @@ rc_crc32(const struct packet *pack)
 }
 
 bool valid_ack(struct packet *p) {
-  uint32_t expected_crc = rc_crc32(p);
+  uint32_t expected_crc = my_crc32(p);
   // FIXME check len is 0 ??
   return (expected_crc == ntohl(p->crc));
 }

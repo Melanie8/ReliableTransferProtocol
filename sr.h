@@ -1,3 +1,6 @@
+#ifndef SR_H
+#define SR_H
+
 #include "mailbox.h"
 
 struct sr_init {
@@ -9,3 +12,5 @@ struct sr_init {
 };
 
 bool selective_repeat (struct message *m);
+
+#endif
