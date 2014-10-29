@@ -163,9 +163,12 @@ int main (int argc, char **argv) {
     len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
     
-    // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
+    
+    // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop 
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
+    if (ntohl(*crc) != expected_crc && len < PAYLOAD_SIZE) {
+    }
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
       printf("Accepted !\n");
 
@@ -180,7 +183,7 @@ int main (int argc, char **argv) {
         /* A packet outside the receiving window is dropped */
         printf("start_window_seqnum : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", start_window_seqnum, *seq_num, start_window_seqnum+real_window_size, N);
         printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
-        // FIXME FAUX, utilise between_mod comme j'ai fait pour sr.c
+
         if (between_mod((start_window_seqnum)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
@@ -194,7 +197,6 @@ int main (int argc, char **argv) {
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
-            // FIXME, (i + 1) % N non ?
             printf("i = %d!\n", i);
             len = ntohs(*((uint16_t*)(buffer[i].data+2)));
             printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
