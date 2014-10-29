@@ -16,7 +16,7 @@ long get_time_usec () {
   return ((long) now.tv_sec) * MILLION + now.tv_usec;
 }
 
-#define N_TIMER (3*(BUFFER_SIZE))
+#define N_TIMER (3*(MAX_WIN_SIZE))
 
 int key[N_TIMER];
 int back[N_TIMER];

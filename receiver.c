@@ -198,10 +198,6 @@ int main (int argc, char **argv) {
           printf("Passed sanity check !\n");
 
         /* A packet outside the receiving window is dropped */
-        if (verbose_flag)
-          printf("lastack_in_window : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", lastack_in_window, *seq_num, lastack_in_window+real_window_size, N);
-        if (verbose_flag)
-          printf("%d >= %d && %d <= %d\n", *seq_num, (lastack_in_window)%(N-1), *seq_num, (lastack_in_window+real_window_size)%(N-1));
 
         if (between_mod((lastack+1)%MAX_SEQ, (lastack+1+real_window_size)%MAX_SEQ, *seq_num )) {
           if (verbose_flag)
