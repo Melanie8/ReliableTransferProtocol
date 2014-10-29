@@ -22,19 +22,19 @@ struct mailbox *sr_inbox;
 
 ssize_t len = PAYLOAD_SIZE;
 ssize_t nread;
-struct packet *packets[MAX_WIN_SIZE];
+struct packet *packets[BUFFER_SIZE];
 int window_size;
 int window_start;
 int start_in_window;
 int cur_seq;
-long int timeout[MAX_WIN_SIZE];
+long int timeout[BUFFER_SIZE];
 
 enum ack_status {
   ack_status_none=0,
   ack_status_sent,
   ack_status_acked
 };
-enum ack_status status[MAX_WIN_SIZE];
+enum ack_status status[BUFFER_SIZE];
 
 void send_mail_to_network_simulator (int id_in_window, bool last) {
   struct message *m = (struct message*) malloc(sizeof(struct message));
@@ -44,6 +44,7 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   sm->p = packets[id_in_window];
   sm->last = last;
   m->data = sm;
+  printf("SR        sends     %d to network\n", m->type);
   send_mail(network_inbox, m);
   status[id_in_window] = ack_status_sent;
 
@@ -56,11 +57,12 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   alrm->inbox = sr_inbox;
   //printf("inbox:%p\n", network_inbox);
   m->data = alrm;
+  printf("SR        sends     %d to timer\n", m->type);
   send_mail(timer_inbox, m);
 }
 
-// FIXME we shouldn't have to add MAX_WIN_SIZE here
-#define INDEX_IN_WINDOW(x) ((MAX_WIN_SIZE + (x) - window_start) % MAX_WIN_SIZE)
+// FIXME we shouldn't have to add BUFFER_SIZE here
+#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x) - window_start) % BUFFER_SIZE)
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
@@ -74,7 +76,8 @@ bool between_mod (int a, int b, int m) {
 
 void check_send () {
   //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
-  while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, CUR_IN_WINDOW)) {
+  while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % BUFFER_SIZE, CUR_IN_WINDOW)) {
+    printf("%d <= %d <= %d\n", start_in_window, CUR_IN_WINDOW, (start_in_window + window_size) % BUFFER_SIZE);
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     len = read(fd, CUR_PACKET->payload, len);
     if (len < 0) {
@@ -84,7 +87,7 @@ void check_send () {
     bool last = false;
     if (len != PAYLOAD_SIZE) {
       // end of file
-      printf("sr      end of file\n");
+      printf("SR      end of file\n");
       close_fd(fd);
       fd = -1;
       last = true;
@@ -118,17 +121,17 @@ void check_send () {
     m_timer->data = NULL;
     m_self->type = STOP_MESSAGE_TYPE;
     m_self->data = NULL;
-    printf("sr      sends    %d to network\n", m_network->type);
+    printf("SR      sends    %d to network\n", m_network->type);
     send_mail(network_inbox, m_network);
-    printf("sr      sends    %d to timer\n", m_timer->type);
+    printf("SR      sends    %d to timer\n", m_timer->type);
     send_mail(timer_inbox, m_timer);
-    printf("sr      sends    %d to sr\n", m_self->type);
+    printf("SR      sends    %d to sr\n", m_self->type);
     send_mail(sr_inbox, m_self);
   }
 }
 
 bool selective_repeat (struct message *m) {
-  printf("sr      receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
+  printf("SR      receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
   if (m->type == INIT_MESSAGE_TYPE) {
     struct sr_init *init_data = (struct sr_init *) m->data;
     fd = init_data->fd;
@@ -138,16 +141,17 @@ bool selective_repeat (struct message *m) {
     sr_inbox = init_data->sr_inbox;
     window_size = MAX_WIN_SIZE;
     int i;
-    for (i = 0; i < MAX_WIN_SIZE; i++) {
+    for (i = 0; i < BUFFER_SIZE; i++) {
       timeout[i] = -1;
     }
     check_send();
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) m->data;
     if (valid_ack(p)) {
-      printf("sr    valid ack seq:%d\n", ntohs(p->seq));
+      printf("SR    valid ack seq:%d\n", ntohs(p->seq));
       int i = 0;
       for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, p->seq); i++) {
+        printf("%d->%d <= %d <= %d\n", window_start, i, p->seq, (i + window_size) % MAX_SEQ);
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
       while (status[window_start] == ack_status_acked) {
@@ -155,10 +159,12 @@ bool selective_repeat (struct message *m) {
         packets[window_start] = NULL;
         status[window_start] = ack_status_none;
         timeout[window_start] = -1;
+        printf("%d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
+        printf("->%d\n",window_start);
       }
     } else {
-      printf("sr  invalid ack seq:%d\n", ntohs(p->seq));
+      printf("SR  invalid ack seq:%d\n", ntohs(p->seq));
     }
     check_send();
   } else {
@@ -166,7 +172,7 @@ bool selective_repeat (struct message *m) {
     struct alarm *alrm = m->data;
     int id = alrm->id / 3;
     //printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->timeout);
-    if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
+    if (between_mod(start_in_window, (start_in_window + window_size) % BUFFER_SIZE, id)
         && status[id] == ack_status_sent
         && timeout[id] == alrm->timeout) {
       // last_seq has already been registered

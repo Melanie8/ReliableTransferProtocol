@@ -45,7 +45,7 @@ void send_scheduled_sending () {
       struct message *m = (struct message*) malloc(sizeof(struct message));
       m->type = ACK_MESSAGE_TYPE;
       m->data = first->p;
-      printf("network send     %d to sr\n", m->type);
+      printf("network send     %d to SR\n", m->type);
       send_mail(sr_inbox, m);
     } else {
       //printf("network let's gooo !!!\n");
@@ -126,6 +126,8 @@ bool network (struct message *m) {
         sm->p->payload[0] ^= 0xff;
       }
       schedule_sending(sm, false);
+    } else {
+      printf("network DROPPED\n");
     }
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;

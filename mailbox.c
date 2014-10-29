@@ -100,12 +100,14 @@ void delete_mailbox (struct mailbox *inbox) {
 struct message *get_mail (struct mailbox *inbox, bool block) {
   int err = 0;
   if (block) {
+    //printf("waiting         %p\n", inbox);
     err = sem_wait(inbox->size);
     if (err != 0) {
       myperror("sem_wait");
       // Il se pourrait que le programme se bloque...
       return NULL;
     }
+    //printf("stopped waiting %p\n", inbox);
   } else {
     err = sem_trywait(inbox->size);
     if (err != 0) {
@@ -171,6 +173,7 @@ void send_mail (struct mailbox *inbox, struct message *m) {
     myerror(err, "pthread_mutex_unlock");
     // free new_l ?? we need to free everything anyway
   }
+  //printf("posting         %p\n", inbox);
   err = sem_post(inbox->size);
   if (err != 0) {
     myperror("sem_post");

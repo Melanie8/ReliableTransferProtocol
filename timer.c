@@ -127,16 +127,15 @@ bool timer (struct message *m) {
     }
   } else {
     printf("timer   receives NULL\n");
+    // the minimum time that can be asked is MIN(delay*MILLION, 3*delay*MILLION) = delay*MILLION
+    int time_to_sleep = delay;
+    if (n > 0) {
+      time_to_sleep = MIN(time_to_sleep, timeout[top_heap()]);
+    }
+    //printf("%d %d %d %ld\n", delay, time_to_sleep, top_heap(), timeout[top_heap()]);
+    int err = usleep(time_to_sleep);
+    // TODO errors
   }
-  check_timers();
-  // the minimum time that can be asked is MIN(delay*MILLION, 3*delay*MILLION) = delay*MILLION
-  int time_to_sleep = delay;
-  if (n > 0) {
-    time_to_sleep = MIN(time_to_sleep, timeout[top_heap()]);
-  }
-  //printf("%d %d %d %ld\n", delay, time_to_sleep, top_heap(), timeout[top_heap()]);
-  int err = usleep(time_to_sleep);
-  // TODO errors
   check_timers();
   return n == 0;
 }
