@@ -118,7 +118,7 @@ bool network (struct message *m) {
   } else if (m->type == SEND_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     if (sm->last) {
-      last_seq = sm->p->seq;
+      last_seq = (sm->p->seq + 1) % MAX_SEQ;
       fprintf(stderr, "LAST_SEQ : %d\n", last_seq);
     }
     if ((rand() % 1000) >= splr) {

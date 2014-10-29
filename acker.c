@@ -17,6 +17,7 @@ void ask_if_cont () {
   struct message *cont = (struct message*) malloc(sizeof(struct message));
   cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
   cont->data = NULL;
+  printf("acker    sends %d to network\n", cont->type);
   send_mail(network_inbox, cont);
 }
 
@@ -43,6 +44,7 @@ bool acker (struct message *m) {
     sm->last = false; // nonsense here
     m->type = ACK_MESSAGE_TYPE;
     m->data = sm;
+    printf("acker    sends %d to network\n", m->type);
     send_mail(network_inbox, m);
     ask_if_cont();
   }

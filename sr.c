@@ -144,8 +144,9 @@ bool selective_repeat (struct message *m) {
     if (valid_ack(p)) {
       fprintf(stderr, "SR    valid ack seq:%d %ld\n", p->seq, get_time_usec());
       int i = 0;
-      for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, p->seq); i++) {
-        fprintf(stderr, "%d->%d <= %d <= %d (%d)\n", window_start, i, p->seq, (i + window_size) % MAX_SEQ, INDEX_IN_WINDOW(i));
+      int lastack = (p->seq + MAX_SEQ - 1) % MAX_SEQ;
+      for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, lastack); i++) {
+        fprintf(stderr, "%d->%d <= %d <= %d (%d)\n", window_start, i, lastack, (i + window_size) % MAX_SEQ, INDEX_IN_WINDOW(i));
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
       while (status[start_in_window] == ack_status_acked) {
