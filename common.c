@@ -19,6 +19,7 @@
 #include <fcntl.h>
 
 #include <inttypes.h>
+#include <zlib.h>
 
 #include "common.h"
 #include "error.h"
@@ -204,51 +205,18 @@ void close_fd (int fd) {
 }
 
 uint32_t
-rc_crc32(const struct packet *pack)
+crc_packet(const struct packet *pack)
 {
-    /*printf("common typ %d\n", pack->type_and_window_size);
-    printf("common seq %d\n", pack->seq);
-    printf("common len %u\n", ntohs(pack->len));
-    printf("common %s\n", pack->payload);*/
+	const char *buffer = (const char *)(pack);
+	size_t length = 4 + PAYLOAD_SIZE;
 
-	uint32_t crc = 0;
-	const char *buf = (const char *)(pack);
-	size_t len = 4 + PAYLOAD_SIZE;
-	static uint32_t table[256];
-	static int have_table = 0;
-	uint32_t rem;
-	uint8_t octet;
-	int i, j;
-	const char *p, *q;
+    uLong crc = crc32(0L, Z_NULL, 0);
 
-	/* This check is not thread safe; there is no mutex. */
-	if (have_table == 0) {
-		/* Calculate CRC table. */
-		for (i = 0; i < 256; i++) {
-			rem = i;  /* remainder from polynomial division */
-			for (j = 0; j < 8; j++) {
-				if (rem & 1) {
-					rem >>= 1;
-					rem ^= 0xedb88320;
-				} else
-					rem >>= 1;
-			}
-			table[i] = rem;
-		}
-		have_table = 1;
-	}
-
-	crc = ~crc;
-	q = buf + len;
-	for (p = buf; p < q; p++) {
-		octet = *p;  /* Cast to unsigned octet. */
-		crc = (crc >> 8) ^ table[(crc & 0xff) ^ octet];
-	}
-	return ~crc;
+    return crc32(crc, buffer, length);
 }
 
 bool valid_ack(struct packet *p) {
-  uint32_t expected_crc = rc_crc32(p);
+  uint32_t expected_crc = crc_packet(p);
   // FIXME check len is 0 ??
   return (expected_crc == ntohl(p->crc) &&
       (p->type_and_window_size >> WINDOW_SIZE) == PTYPE_ACK);

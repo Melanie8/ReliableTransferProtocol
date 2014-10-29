@@ -95,7 +95,7 @@ void check_send () {
     //printf("%d\n", CUR_PACKET->len);
 
     //CUR_PACKET->crc = htonl((uint32_t) crc32(0, (const Bytef *)CUR_PACKET, PACKET_SIZE-CRC_SIZE));
-    CUR_PACKET->crc = htonl(rc_crc32(CUR_PACKET));
+    CUR_PACKET->crc = htonl(crc_packet(CUR_PACKET));
     //printf("sr %lu %lu\n", CUR_PACKET->crc, ntohl(CUR_PACKET->crc));
     //printf("sr %d\n", CUR_PACKET->type_and_window_size);
     //printf("sr %d\n", CUR_PACKET->seq);

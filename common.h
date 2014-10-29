@@ -55,7 +55,7 @@ struct packet {
 void close_fd (int fd);
 
 /* */
-uint32_t rc_crc32(const struct packet *pack);
+uint32_t crc_packet(const struct packet *pack);
 
 bool valid_ack(struct packet *p);
 

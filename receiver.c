@@ -164,7 +164,7 @@ int main (int argc, char **argv) {
 
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
-    uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
+    uint32_t expected_crc = crc_packet((struct packet*) &packet[0]);
 
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
 
@@ -220,7 +220,7 @@ int main (int argc, char **argv) {
         *seq_num = (lastack+1)%MAX_SEQ;
         header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
-        *crc = htonl(rc_crc32((struct packet*) &packet[0]));
+        *crc = htonl(crc_packet((struct packet*) &packet[0]));
         fprintf(stderr, "%d %u\n", *seq_num, crc);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
