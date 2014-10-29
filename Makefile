@@ -10,6 +10,12 @@ all: sender receiver
 send: sender
 	./sender ::1 8888 --file in --delay 1 --sber 10 --splr 10
 
+sendbiglorem: sender
+	./sender ::1 8888 --file biglorem --delay 1 --sber 10 --splr 10
+
+sendlittlelorem: sender
+	./sender ::1 8888 --file littlelorem --delay 1 --sber 10 --splr 10
+
 receive: receiver
 	./receiver :: 8888 --file out
 

@@ -26,22 +26,25 @@
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
 char packet[PACKET_SIZE];           // a received packet
-char *header, *seq_num, *payload;   // pointers to the different areas of the packet
+char *header, *payload;   // pointers to the different areas of the packet
+uint8_t *seq_num;
 uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
 int lastack;                       // sequence number of the last acknowledged packet
+int start_window_seqnum;            // a quel sequence number correspond le début de ma window
 char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
 
   /* Initialisation of the variables */
   header = (char *) packet;
-  seq_num = (char *) (header + 1);
+  seq_num = (uint8_t *) (header + 1);
   payload = header + 4;
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  lastack = N-1;
+  lastack = MAX_WIN_SIZE - 1;
+  start_window_seqnum = 0;
   real_window_size = BUFFER_SIZE;
   int i;
   for (i=0; i<BUFFER_SIZE; i++) {
@@ -160,9 +163,12 @@ int main (int argc, char **argv) {
     len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
     
-    // FIXME si c'est pas accepted et len < PAYLOAD_SIZE, ne pas s'arreter
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
+    
+    // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop 
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
+    if (ntohl(*crc) != expected_crc && len < PAYLOAD_SIZE) {
+    }
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
       printf("Accepted !\n");
 
@@ -175,12 +181,13 @@ int main (int argc, char **argv) {
         printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
-        printf("%d >= %d && %d <= %d\n", *seq_num, ((lastack+1) %N), *seq_num, ((lastack+real_window_size) %N));
-        // FIXME FAUX, utilise between_mod comme j'ai fait pour sr.c
-        if (*seq_num >= ((lastack+1) %N) && *seq_num <= ((lastack+real_window_size) %N)) {
+        printf("start_window_seqnum : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", start_window_seqnum, *seq_num, start_window_seqnum+real_window_size, N);
+        printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
+
+        if (between_mod((start_window_seqnum)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
-          char slot_number = (*seq_num-lastack-1);
+          int slot_number = (*seq_num - start_window_seqnum);
           printf("slot_number:%d\n", slot_number);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
@@ -190,7 +197,6 @@ int main (int argc, char **argv) {
            * Lastack and the receiving window are updated.
            */
           for (i=0; buffer[i].received; i++) {
-            // FIXME, (i + 1) % N non ?
             printf("i = %d!\n", i);
             len = ntohs(*((uint16_t*)(buffer[i].data+2)));
             printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
@@ -199,7 +205,8 @@ int main (int argc, char **argv) {
             }
             buffer[i].received = false;
           }
-          lastack = (lastack+i)%N;
+          lastack = (lastack+i)%MAX_WIN_SIZE;
+          start_window_seqnum = (start_window_seqnum+i)%(N-1);
         }
 
         /* An acknowledgement is sent */
