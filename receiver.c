@@ -34,6 +34,7 @@ struct slot buffer[MAX_WIN_SIZE];    // the receiving buffer containing out of s
 int lastack;                       // sequence number of the last acknowledged packet
 int lastack_in_window;            // a quel sequence number correspond le début de ma window
 char real_window_size;              // the current size of the receiving window
+int lastseq;                        // variable qui vaut -1 au début, devient le seqnum du dernier packet, stop programme quand = lastack
 
 int main (int argc, char **argv) {
 
@@ -46,6 +47,7 @@ int main (int argc, char **argv) {
   lastack = MAX_SEQ - 1;
   lastack_in_window = MAX_WIN_SIZE - 1;
   real_window_size = MAX_WIN_SIZE;
+  lastseq = -1;
   int i;
   for (i=0; i<MAX_WIN_SIZE; i++) {
     buffer[i].received = false;
@@ -138,7 +140,7 @@ int main (int argc, char **argv) {
 
 
   /* Until we reach the end of the transmission */
-  while (len == PAYLOAD_SIZE) {
+  while (lastseq != lastack) {
 	printf("len : %d\n", len);
 
     /* Packet reception */
@@ -162,7 +164,10 @@ int main (int argc, char **argv) {
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
-
+    
+    if (len < PAYLOAD_SIZE)
+      lastseq = seq_num;
+    
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
 
     // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop
