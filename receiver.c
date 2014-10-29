@@ -144,7 +144,7 @@ int main (int argc, char **argv) {
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
-    printf("nread : %d/n", nread);                 
+    printf("nread : %d\n", nread);                 
     if (nread == -1)
       continue; //Ignore failed request
 
@@ -214,7 +214,7 @@ int main (int argc, char **argv) {
         header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(rc_crc32((struct packet*) &packet[0]));
-        printf("%d %u\n", *seq_num, crc);
+        fprintf(stderr, "%d %u\n", *seq_num, crc);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }

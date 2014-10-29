@@ -24,7 +24,7 @@
 
 #define WINDOW_SIZE 5
 #define MAX_WIN_SIZE ((1 << WINDOW_SIZE) - 1)
-#define BUFFER_SIZE (MAX_WIN_SIZE + 1)
+#define BUFFER_SIZE (MAX_WIN_SIZE)
 
 #define PTYPE_DATA 1
 #define PTYPE_ACK 2

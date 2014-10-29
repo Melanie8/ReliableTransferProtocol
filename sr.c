@@ -62,14 +62,14 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 }
 
 // FIXME we shouldn't have to add BUFFER_SIZE here
-#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x)) % BUFFER_SIZE)
+#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x) - window_start + start_in_window) % BUFFER_SIZE)
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
 void check_send () {
   //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
-  while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % BUFFER_SIZE, CUR_IN_WINDOW)) {
-    fprintf(stderr, "%d <= %d <= %d\n", start_in_window, CUR_IN_WINDOW, (start_in_window + window_size) % BUFFER_SIZE);
+  while (fd > 0 && between_mod(window_start, (window_start + window_size) % MAX_SEQ, cur_seq)) {
+    fprintf(stderr, "%d <= %d <= %d\n", window_start, cur_seq, (window_start + window_size) % MAX_SEQ);
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     len = read(fd, CUR_PACKET->payload, len);
     if (len < 0) {
@@ -153,6 +153,7 @@ bool selective_repeat (struct message *m) {
         timeout[window_start] = -1;
         fprintf(stderr, "%d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
+        start_in_window = (start_in_window + 1) % BUFFER_SIZE;
         fprintf(stderr, "->%d\n",window_start);
       }
     } else {

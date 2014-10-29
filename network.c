@@ -127,7 +127,7 @@ bool network (struct message *m) {
       }
       schedule_sending(sm, false);
     } else {
-      printf("network DROPPED\n");
+      fprintf(stderr, "network DROPPED\n");
     }
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
