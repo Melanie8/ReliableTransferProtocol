@@ -144,6 +144,15 @@ We choose to create several agents responsible for different aspects of the send
 \end{itemize}
 The Figure ?? illustrates the interactions between those agents. 
 
+\subsubsection{Clean exit in case of errors}
+In \lstinline|error.c|, we define that when an error occurs, we print a message according to \lstinline|errno|
+and we set the flag \lstinline|panic| to \lstinline|true|.
+
+In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set,
+the rest of the messages are ignored and the thread terminates.
+
+In \lstinline|sender.c|, we join each threads, close the file and exits with status \lstinline|EXIT_FAILURE|.
+
 \subsection{Receiver}
 pas de recopiage dans buffer, joujou avec deux index
 
