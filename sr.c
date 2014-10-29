@@ -62,14 +62,14 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 }
 
 // FIXME we shouldn't have to add BUFFER_SIZE here
-#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x) - window_start) % BUFFER_SIZE)
+#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x)) % BUFFER_SIZE)
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
 void check_send () {
   //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
   while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % BUFFER_SIZE, CUR_IN_WINDOW)) {
-    printf("%d <= %d <= %d\n", start_in_window, CUR_IN_WINDOW, (start_in_window + window_size) % BUFFER_SIZE);
+    fprintf(stderr, "%d <= %d <= %d\n", start_in_window, CUR_IN_WINDOW, (start_in_window + window_size) % BUFFER_SIZE);
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     len = read(fd, CUR_PACKET->payload, len);
     if (len < 0) {
@@ -140,10 +140,10 @@ bool selective_repeat (struct message *m) {
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) m->data;
     if (valid_ack(p)) {
-      printf("SR    valid ack seq:%d\n", ntohs(p->seq));
+      fprintf(stderr, "SR    valid ack seq:%d %ld\n", p->seq, get_time_usec());
       int i = 0;
       for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, p->seq); i++) {
-        printf("%d->%d <= %d <= %d\n", window_start, i, p->seq, (i + window_size) % MAX_SEQ);
+        fprintf(stderr, "%d->%d <= %d <= %d (%d)\n", window_start, i, p->seq, (i + window_size) % MAX_SEQ, INDEX_IN_WINDOW(i));
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
       while (status[window_start] == ack_status_acked) {
@@ -151,12 +151,12 @@ bool selective_repeat (struct message *m) {
         packets[window_start] = NULL;
         status[window_start] = ack_status_none;
         timeout[window_start] = -1;
-        printf("%d",window_start);
+        fprintf(stderr, "%d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
-        printf("->%d\n",window_start);
+        fprintf(stderr, "->%d\n",window_start);
       }
     } else {
-      printf("SR  invalid ack seq:%d\n", ntohs(p->seq));
+      fprintf(stderr, "SR  invalid ack seq:%d\n", p->seq);
     }
     check_send();
   } else {
