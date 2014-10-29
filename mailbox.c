@@ -10,6 +10,13 @@
 #include "mailbox.h"
 #include "error.h"
 
+struct message *get_stop_message() {
+  struct message *m = (struct message *) malloc(sizeof(struct message));
+  m->type = STOP_MESSAGE_TYPE;
+  m->data = NULL;
+  return m;
+}
+
 struct mailbox {
   struct letter *next;
   struct letter *last;

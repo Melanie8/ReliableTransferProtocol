@@ -133,7 +133,6 @@ int main (int argc, char **argv) {
     err = getnameinfo((struct sockaddr *) &peer_addr,
                     peer_addr_len, host, NI_MAXHOST,
                     service, NI_MAXSERV, NI_NUMERICSERV);
-    err = -1;
     if (err == 0) {
       if (verbose_flag)
         printf("Received %zd bytes from %s:%s\n",

@@ -23,7 +23,13 @@ struct mailbox *sr_inbox;
 
 ssize_t len = PAYLOAD_SIZE;
 ssize_t nread;
-struct packet *packets[MAX_WIN_SIZE];
+/*
+ * The problem is that this is shared with the network simulator agent
+ * if we want to read a new packet payload from the file but the old
+ * one is still being resent by the network simulator, there is problem
+ * Using MAX_SEQ, it is very unlikely. If it happens, the crc will be invalid if we modify it while it is sent or if it finishes, this will be the valid new packet
+ */
+struct packet *packets[MAX_SEQ];
 int window_size;
 int window_start;
 int start_in_window;
@@ -37,12 +43,12 @@ enum ack_status {
 };
 enum ack_status status[MAX_WIN_SIZE];
 
-void send_mail_to_network_simulator (int id_in_window, bool last) {
+void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
   struct message *m = (struct message*) malloc(sizeof(struct message));
   m->type = SEND_MESSAGE_TYPE;
   struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
   sm->id = id_in_window;
-  sm->p = packets[id_in_window];
+  sm->p = packets[seq];
   sm->last = last;
   m->data = sm;
   if (verbose_flag)
@@ -66,11 +72,13 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 // FIXME we shouldn't have to add MAX_WIN_SIZE here
 #define INDEX_IN_WINDOW(x) index_in_window(window_start, start_in_window, (x))
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
-#define CUR_PACKET packets[CUR_IN_WINDOW]
+#define CUR_PACKET (packets[cur_seq])
 
 void check_send () {
   while (fd > 0 && between_mod(window_start, (window_start + window_size) % MAX_SEQ, cur_seq)) {
-    CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
+    if (CUR_PACKET == NULL) {
+      CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
+    }
     len = read(fd, CUR_PACKET->payload, len);
     if (len < 0) {
       myperror("read");
@@ -95,7 +103,7 @@ void check_send () {
     //CUR_PACKET->crc = htonl((uint32_t) crc32(0, (const Bytef *)CUR_PACKET, PACKET_SIZE-CRC_SIZE));
     CUR_PACKET->crc = htonl(crc_packet(CUR_PACKET));
 
-    send_mail_to_network_simulator(CUR_IN_WINDOW, last);
+    send_mail_to_network_simulator(cur_seq, CUR_IN_WINDOW, last);
 
     cur_seq = (cur_seq + 1) % MAX_SEQ;
   }
@@ -149,8 +157,6 @@ bool selective_repeat (struct message *m) {
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
       while (status[start_in_window] == ack_status_acked) {
-        free(packets[start_in_window]);
-        packets[start_in_window] = NULL;
         status[start_in_window] = ack_status_none;
         sr_timeout[start_in_window] = -1;
         if (verbose_flag)
@@ -165,15 +171,22 @@ bool selective_repeat (struct message *m) {
         printf("SR      invalid ack seq:%d\n", p->seq);
     }
     check_send();
-  } else {
-    assert(m->type == TIMEOUT_MESSAGE_TYPE);
+  } else if (m->type == TIMEOUT_MESSAGE_TYPE) {
     struct alarm *alrm = m->data;
     int id = alrm->id / 3;
     if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
         && sr_timeout[id] == alrm->timeout) {
       // last_seq has already been registered
-      send_mail_to_network_simulator(id, false);
+      send_mail_to_network_simulator(index_to_seq(window_start, start_in_window, id), id, false);
+    }
+  } else {
+    assert(m->type == STOP_MESSAGE_TYPE);
+    int i;
+    for (i = 0; i < MAX_SEQ; i++) {
+      if (packets[i] != NULL) {
+        free(packets[i]);
+      }
     }
   }
   return true;

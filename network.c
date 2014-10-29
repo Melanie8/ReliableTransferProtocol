@@ -51,7 +51,9 @@ void send_scheduled_sending () {
         exit(EXIT_FAILURE);
       }
     }
+    struct network_message *oldfirst = first;
     first = first->next;
+    free(oldfirst);
     if (first == NULL) {
       last = NULL;
     }
@@ -145,9 +147,11 @@ bool network (struct message *m) {
     if (verbose_flag)
       printf("network sends    %d to acker\n", m->type);
     send_mail(acker_inbox, cont);
-  } else {
-    assert(m->type == TIMEOUT_MESSAGE_TYPE);
+  } else if (m->type == TIMEOUT_MESSAGE_TYPE) {
     send_scheduled_sending();
+  } else {
+    assert(m->type == STOP_MESSAGE_TYPE);
+    // TODO free NM's
   }
   return true;
 }

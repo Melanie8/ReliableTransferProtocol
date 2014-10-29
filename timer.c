@@ -111,13 +111,14 @@ bool timer (struct message *m) {
       for (i = 0; i < N_TIMER; i++) {
         back[i] = -1;
       }
-    } else {
-      assert(m->type == ALARM_MESSAGE_TYPE);
+    } else if (m->type == ALARM_MESSAGE_TYPE) {
       struct alarm *alrm = (struct alarm *) m->data;
       timer_timeout[alrm->id] = alrm->timeout;
       inbox[alrm->id] = alrm->inbox;
       push_heap(alrm->id);
-      int i;
+      check_timers();
+    } else {
+      assert(m->type == STOP_MESSAGE_TYPE);
     }
   } else {
     if (verbose_flag)
@@ -129,7 +130,7 @@ bool timer (struct message *m) {
     }
     int err = usleep(time_to_sleep);
     // TODO errors
+    check_timers();
   }
-  check_timers();
   return n == 0;
 }

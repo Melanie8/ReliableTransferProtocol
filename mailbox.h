@@ -20,6 +20,8 @@ struct message {
   void *data;
 };
 
+struct message *get_stop_message();
+
 struct mailbox *new_mailbox ();
 void delete_mailbox (struct mailbox *inbox);
 struct message *get_mail (struct mailbox *inbox, bool block);

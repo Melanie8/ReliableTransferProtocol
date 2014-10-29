@@ -33,6 +33,11 @@ void *agent (void *data) {
       free(mail);
     }
   }
+  free(args);
+
+  struct message *stop_m = get_stop_message();
+  args->handler(stop_m);
+  free(stop_m);
   return NULL;
 }
 

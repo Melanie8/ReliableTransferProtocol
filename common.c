@@ -236,3 +236,10 @@ int index_in_window (int x, int x_in_window, int i) {
     return (i - x + x_in_window) % MAX_WIN_SIZE;
   }
 }
+int index_to_seq (int x, int x_in_window, int i) {
+  if (i < x_in_window) {
+    return (i + (MAX_WIN_SIZE - x_in_window) + x) % MAX_SEQ;
+  } else {
+    return (i - x_in_window + x) % MAX_SEQ;
+  }
+}

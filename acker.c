@@ -16,9 +16,8 @@ int ack_id;
 int verbose_flag;
 
 void ask_if_cont () {
-  struct message *cont = (struct message*) malloc(sizeof(struct message));
+  struct message *cont = get_stop_message();
   cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
-  cont->data = NULL;
   if (verbose_flag)
     printf("acker   sends %d to network\n", cont->type);
   send_mail(network_inbox, cont);
@@ -31,26 +30,27 @@ bool acker (struct message *m) {
     sfd = init->sfd;
     verbose_flag = init->verbose_flag;
     ask_if_cont();
-  } else {
-    assert(m->type == CONTINUE_ACKING_MESSAGE_TYPE);
+  } else if (m->type == CONTINUE_ACKING_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) malloc(sizeof(struct packet));
     ssize_t nread = read(sfd, p, PACKET_SIZE);
     if (nread == -1) {
       myperror("read");
       exit(EXIT_FAILURE);
     }
-    struct message *m = (struct message*) malloc(sizeof(struct message));
+    struct message *ack_m = get_stop_message();
     struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
     sm->p = p;
     sm->id = ack_id;
     ack_id = (ack_id + 1) % MAX_WIN_SIZE;
     sm->last = false; // nonsense here
-    m->type = ACK_MESSAGE_TYPE;
-    m->data = sm;
+    ack_m->type = ACK_MESSAGE_TYPE;
+    ack_m->data = sm;
     if (verbose_flag)
       printf("acker   sends %d to network\n", m->type);
-    send_mail(network_inbox, m);
+    send_mail(network_inbox, ack_m);
     ask_if_cont();
+  } else {
+    assert(m->type == STOP_MESSAGE_TYPE);
   }
   return true;
 }

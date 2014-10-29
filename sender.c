@@ -145,5 +145,5 @@ int main (int argc, char **argv) {
 
   //close_fd(fd); // done by sr
 
-  exit(EXIT_SUCCESS);
+  exit(panic ? EXIT_FAILURE : EXIT_SUCCESS);
 }
