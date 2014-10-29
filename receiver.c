@@ -90,34 +90,12 @@ int main (int argc, char **argv) {
      and) try the next address. */
 
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    sfd = socket(rp->ai_family, rp->ai_socktype,
-        rp->ai_protocol);
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     if (sfd == -1)
       continue;
 
-    {
-        char hostname[NI_MAXHOST];
-
-        if (verbose_flag)
-          printf("f%d fam%d sock%d prot%d %d %d %d ai_canonname:%s\n", rp->ai_flags, rp->ai_family, rp->ai_socktype, rp->ai_protocol, rp->ai_addrlen, rp->ai_addr->sa_family, *(rp->ai_addr->sa_data), rp->ai_canonname);
-        int error = getnameinfo(rp->ai_addr, rp->ai_addrlen, hostname, NI_MAXHOST, NULL, 0, 0);
-        if (error != 0)
-        {
-            fprintf(stderr, "error in getnameinfo: %s\n", gai_strerror(error));
-            continue;
-        }
-        if (*hostname != '\0')
-            printf("hostname: %s\n", hostname);
-    }
-
-
-    int err = bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0;
-    if (err)
+    if (bind(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
       break;                  /* Success */
-    else {
-      printf("%d\n", errno);
-      myperror("bind");
-    }
 
     close(sfd);
   }

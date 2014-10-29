@@ -4,6 +4,7 @@
 #include "mailbox.h"
 
 struct sr_init {
+  bool verbose_flag;
   int fd;
   int delay;
   struct mailbox *network_inbox;

@@ -189,7 +189,6 @@ int get_fd (const char *filename, bool write) {
       myperror("open");
       exit(EXIT_FAILURE);
     }
-    fprintf(stderr, "%s opened\n", filename);
     return fd;
   }
 }

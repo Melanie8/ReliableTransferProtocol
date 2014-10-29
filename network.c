@@ -26,6 +26,7 @@ struct mailbox *timer_inbox;
 struct mailbox *network_inbox;
 int last_seq;
 bool continue_acking;
+bool verbose_flag;
 
 // initialized to 0 (i.e. NULL)
 struct network_message *first;
@@ -39,7 +40,8 @@ void send_scheduled_sending () {
       struct message *m = (struct message*) malloc(sizeof(struct message));
       m->type = ACK_MESSAGE_TYPE;
       m->data = first->p;
-      printf("network send     %d to SR\n", m->type);
+      if (verbose_flag)
+        printf("network send     %d to SR\n", m->type);
       send_mail(sr_inbox, m);
     } else {
       // TODO do an agent that send because here we make the ack
@@ -87,15 +89,18 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   alrm->timeout = nm->time;
   alrm->inbox = network_inbox;
   m->data = alrm;
-  printf("network send     %d to timer\n", m->type);
+  if (verbose_flag)
+    printf("network send     %d to timer\n", m->type);
   send_mail(timer_inbox, m);
 }
 
 
 bool network (struct message *m) {
-  printf("network receives %d\n", m->type);
+  if (verbose_flag)
+    printf("network receives %d\n", m->type);
   if (m->type == INIT_MESSAGE_TYPE) {
     struct network_init *init = (struct network_init *) m->data;
+    verbose_flag = init->verbose_flag;
     sber = init->sber;
     splr = init->splr;
     sfd = init->sfd;
@@ -111,7 +116,8 @@ bool network (struct message *m) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     if (sm->last) {
       last_seq = (sm->p->seq + 1) % MAX_SEQ;
-      printf("LAST_SEQ : %d\n", last_seq);
+      if (verbose_flag)
+        printf("LAST_SEQ : %d\n", last_seq);
     }
     if ((rand() % 1000) >= splr) {
       if ((rand() % 1000) < sber) {
@@ -119,7 +125,8 @@ bool network (struct message *m) {
       }
       schedule_sending(sm, false);
     } else {
-      printf("network DROPPED packet %d\n", sm->p->seq);
+      if (verbose_flag)
+        printf("network DROPPED packet %d\n", sm->p->seq);
     }
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
@@ -135,7 +142,8 @@ bool network (struct message *m) {
       cont->type = STOP_MESSAGE_TYPE;
     }
     cont->data = NULL;
-    printf("network sends    %d to acker\n", m->type);
+    if (verbose_flag)
+      printf("network sends    %d to acker\n", m->type);
     send_mail(acker_inbox, cont);
   } else {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);

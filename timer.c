@@ -8,6 +8,7 @@
 #include "timer.h"
 
 int delay;
+bool verbose_flag;
 
 long get_time_usec () {
   struct timeval now;
@@ -100,10 +101,12 @@ void check_timers () {
 
 bool timer (struct message *m) {
   if (m != NULL) {
-    printf("timer   receives %d\n", m->type);
+    if (verbose_flag)
+      printf("timer   receives %d\n", m->type);
     if (m->type == INIT_MESSAGE_TYPE) {
       struct timer_init *init = (struct timer_init*) m->data;
       delay = init->delay;
+      verbose_flag = init->verbose_flag;
       int i;
       for (i = 0; i < N_TIMER; i++) {
         back[i] = -1;
@@ -117,7 +120,8 @@ bool timer (struct message *m) {
       int i;
     }
   } else {
-    printf("timer   receives NULL\n");
+    if (verbose_flag)
+      printf("timer   receives NULL\n");
     // the minimum time that can be asked is MIN(delay, 3*delay) = delay
     int time_to_sleep = delay;
     if (n > 0) {

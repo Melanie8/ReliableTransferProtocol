@@ -14,6 +14,7 @@
 #include "error.h"
 
 // initialized to 0
+bool verbose_flag;
 int delay;
 int fd;
 struct mailbox *network_inbox;
@@ -44,7 +45,8 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   sm->p = packets[id_in_window];
   sm->last = last;
   m->data = sm;
-  printf("SR      sends    %d to network\n", m->type);
+  if (verbose_flag)
+    printf("SR      sends    %d to network\n", m->type);
   send_mail(network_inbox, m);
   status[id_in_window] = ack_status_sent;
 
@@ -55,9 +57,9 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   alrm->timeout = get_time_usec() + ((long) delay) * 3;
   sr_timeout[id_in_window] = alrm->timeout;
   alrm->inbox = sr_inbox;
-  //printf("inbox:%p\n", network_inbox);
   m->data = alrm;
-  printf("SR      sends    %d to timer\n", m->type);
+  if (verbose_flag)
+    printf("SR      sends    %d to timer\n", m->type);
   send_mail(timer_inbox, m);
 }
 
@@ -67,7 +69,6 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
 void check_send () {
-  //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
   while (fd > 0 && between_mod(window_start, (window_start + window_size) % MAX_SEQ, cur_seq)) {
     CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     len = read(fd, CUR_PACKET->payload, len);
@@ -78,7 +79,8 @@ void check_send () {
     bool last = false;
     if (len != PAYLOAD_SIZE) {
       // end of file
-      printf("SR      end of file\n");
+      if (verbose_flag)
+        printf("SR      end of file\n");
       close_fd(fd);
       fd = -1;
       last = true;
@@ -107,24 +109,29 @@ void check_send () {
     m_timer->data = NULL;
     m_self->type = STOP_MESSAGE_TYPE;
     m_self->data = NULL;
-    printf("SR    sends     %d to network\n", m_network->type);
+    if (verbose_flag)
+      printf("SR    sends     %d to network\n", m_network->type);
     send_mail(network_inbox, m_network);
-    printf("SR    sends     %d to timer\n", m_timer->type);
+    if (verbose_flag)
+      printf("SR    sends     %d to timer\n", m_timer->type);
     send_mail(timer_inbox, m_timer);
-    printf("SR    sends     %d to sr\n", m_self->type);
+    if (verbose_flag)
+      printf("SR    sends     %d to sr\n", m_self->type);
     send_mail(sr_inbox, m_self);
   }
 }
 
 bool selective_repeat (struct message *m) {
-  printf("SR      receives %d\n", m->type);
+  if (verbose_flag)
+    printf("SR      receives %d\n", m->type);
   if (m->type == INIT_MESSAGE_TYPE) {
-    struct sr_init *init_data = (struct sr_init *) m->data;
-    fd = init_data->fd;
-    delay = init_data->delay;
-    network_inbox = init_data->network_inbox;
-    timer_inbox = init_data->timer_inbox;
-    sr_inbox = init_data->sr_inbox;
+    struct sr_init *init = (struct sr_init *) m->data;
+    verbose_flag = init->verbose_flag;
+    fd = init->fd;
+    delay = init->delay;
+    network_inbox = init->network_inbox;
+    timer_inbox = init->timer_inbox;
+    sr_inbox = init->sr_inbox;
     window_size = MAX_WIN_SIZE;
     int i;
     for (i = 0; i < MAX_WIN_SIZE; i++) {
@@ -134,7 +141,8 @@ bool selective_repeat (struct message *m) {
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) m->data;
     if (valid_ack(p)) {
-      printf("SR      valid ack seq:%d\n", p->seq);
+      if (verbose_flag)
+        printf("SR      valid ack seq:%d\n", p->seq);
       int i = 0;
       int lastack = (p->seq + MAX_SEQ - 1) % MAX_SEQ;
       for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, lastack); i++) {
@@ -145,13 +153,16 @@ bool selective_repeat (struct message *m) {
         packets[start_in_window] = NULL;
         status[start_in_window] = ack_status_none;
         sr_timeout[start_in_window] = -1;
-        printf("window_start : %d",window_start);
+        if (verbose_flag)
+          printf("window_start : %d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
         start_in_window = (start_in_window + 1) % MAX_WIN_SIZE;
-        printf("->%d\n",window_start);
+        if (verbose_flag)
+          printf("->%d\n",window_start);
       }
     } else {
-      printf("SR      invalid ack seq:%d\n", p->seq);
+      if (verbose_flag)
+        printf("SR      invalid ack seq:%d\n", p->seq);
     }
     check_send();
   } else {

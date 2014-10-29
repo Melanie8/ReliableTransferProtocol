@@ -7,6 +7,7 @@ struct simulator_message {
 };
 
 struct network_init {
+  bool verbose_flag;
   int sber;
   int splr;
   int sfd;

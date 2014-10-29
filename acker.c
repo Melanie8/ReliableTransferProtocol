@@ -13,12 +13,14 @@
 struct mailbox *network_inbox;
 int sfd;
 int ack_id;
+int verbose_flag;
 
 void ask_if_cont () {
   struct message *cont = (struct message*) malloc(sizeof(struct message));
   cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
   cont->data = NULL;
-  printf("acker   sends %d to network\n", cont->type);
+  if (verbose_flag)
+    printf("acker   sends %d to network\n", cont->type);
   send_mail(network_inbox, cont);
 }
 
@@ -27,6 +29,7 @@ bool acker (struct message *m) {
     struct acker_init *init = m->data;
     network_inbox = init->network_inbox;
     sfd = init->sfd;
+    verbose_flag = init->verbose_flag;
     ask_if_cont();
   } else {
     assert(m->type == CONTINUE_ACKING_MESSAGE_TYPE);
@@ -44,7 +47,8 @@ bool acker (struct message *m) {
     sm->last = false; // nonsense here
     m->type = ACK_MESSAGE_TYPE;
     m->data = sm;
-    printf("acker   sends %d to network\n", m->type);
+    if (verbose_flag)
+      printf("acker   sends %d to network\n", m->type);
     send_mail(network_inbox, m);
     ask_if_cont();
   }

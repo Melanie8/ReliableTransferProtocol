@@ -11,6 +11,7 @@ struct alarm {
 
 struct timer_init {
   int delay;
+  bool verbose_flag;
 };
 
 long get_time_usec ();

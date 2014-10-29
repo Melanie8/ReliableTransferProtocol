@@ -69,8 +69,7 @@ int main (int argc, char **argv) {
      and) try the next address. */
 
   for (rp = result; rp != NULL; rp = rp->ai_next) {
-    sfd = socket(rp->ai_family, rp->ai_socktype,
-        rp->ai_protocol);
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     if (sfd == -1)                                               /* QUESTION : EN QUOI C'EST UTILE? */
       continue;
 
@@ -110,14 +109,18 @@ int main (int argc, char **argv) {
   network_i->sr_inbox = sr_inbox;
   network_i->timer_inbox = timer_inbox;
   network_i->network_inbox = network_inbox;
+  network_i->verbose_flag = verbose_flag;
   timer_i->delay = delay;
+  timer_i->verbose_flag = verbose_flag;
   sr_i->fd = fd;
   sr_i->delay = delay;
   sr_i->network_inbox = network_inbox;
   sr_i->timer_inbox = timer_inbox;
   sr_i->sr_inbox = sr_inbox;
+  sr_i->verbose_flag = verbose_flag;
   acker_i->sfd = sfd;
   acker_i->network_inbox = network_inbox;
+  acker_i->verbose_flag = verbose_flag;
   // the order is important so that INIT is
   // the first message sent
   // sr with start everything so call it last
@@ -128,13 +131,17 @@ int main (int argc, char **argv) {
   send_init_message(acker_inbox, acker_i);
 
   pthread_join(sr_thread, NULL);
-  printf("sr joined\n");
+  if (verbose_flag)
+    printf("sr joined\n");
   pthread_join(network_thread, NULL);
-  printf("network joined\n");
+  if (verbose_flag)
+    printf("network joined\n");
   pthread_join(acker_thread, NULL);
-  printf("acker joined\n");
+  if (verbose_flag)
+    printf("acker joined\n");
   pthread_join(timer_thread, NULL);
-  printf("timer joined\n");
+  if (verbose_flag)
+    printf("timer joined\n");
 
   //close_fd(fd); // done by sr
 
