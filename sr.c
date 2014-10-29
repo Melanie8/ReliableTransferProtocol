@@ -27,7 +27,7 @@ int window_size;
 int window_start;
 int start_in_window;
 int cur_seq;
-long int timeout[BUFFER_SIZE];
+static long int sr_timeout[BUFFER_SIZE];
 
 enum ack_status {
   ack_status_none=0,
@@ -53,7 +53,9 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
   alrm->id = id_in_window * 3 + 2;
   alrm->timeout = get_time_usec() + ((long) delay) * 3;
-  timeout[id_in_window] = alrm->timeout;
+  fprintf(stderr, "%d--- %ld\n", id_in_window, sr_timeout[id_in_window]);
+  sr_timeout[id_in_window] = alrm->timeout;
+  fprintf(stderr, "%d--- %ld\n", id_in_window, sr_timeout[id_in_window]);
   alrm->inbox = sr_inbox;
   //printf("inbox:%p\n", network_inbox);
   m->data = alrm;
@@ -123,7 +125,7 @@ void check_send () {
 }
 
 bool selective_repeat (struct message *m) {
-  printf("SR      receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
+  fprintf(stderr, "SR      receives %d init:%d ack:%d timeout:%d\n", m->type, INIT_MESSAGE_TYPE, ACK_MESSAGE_TYPE, TIMEOUT_MESSAGE_TYPE);
   if (m->type == INIT_MESSAGE_TYPE) {
     struct sr_init *init_data = (struct sr_init *) m->data;
     fd = init_data->fd;
@@ -133,8 +135,8 @@ bool selective_repeat (struct message *m) {
     sr_inbox = init_data->sr_inbox;
     window_size = MAX_WIN_SIZE;
     int i;
-    for (i = 0; i < BUFFER_SIZE; i++) {
-      timeout[i] = -1;
+    for (i = 0; i < MAX_WIN_SIZE; i++) {
+      sr_timeout[i] = -1;
     }
     check_send();
   } else if (m->type == ACK_MESSAGE_TYPE) {
@@ -150,7 +152,7 @@ bool selective_repeat (struct message *m) {
         free(packets[start_in_window]);
         packets[start_in_window] = NULL;
         status[start_in_window] = ack_status_none;
-        timeout[start_in_window] = -1;
+        sr_timeout[start_in_window] = -1;
         fprintf(stderr, "%d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
         start_in_window = (start_in_window + 1) % BUFFER_SIZE;
@@ -164,10 +166,12 @@ bool selective_repeat (struct message *m) {
     assert(m->type == TIMEOUT_MESSAGE_TYPE);
     struct alarm *alrm = m->data;
     int id = alrm->id / 3;
-    //printf("-->%d %d %ld %ld\n", id, status[id], timeout[id], alrm->timeout);
-    if (between_mod(start_in_window, (start_in_window + window_size) % BUFFER_SIZE, id)
+    fprintf(stderr, "-->%d %d %ld %ld\n", id, status[id], sr_timeout[id], alrm->timeout);
+    fprintf(stderr, "-->%d <= %d <= %d\n", start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id);
+    if (between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, id)
         && status[id] == ack_status_sent
-        && timeout[id] == alrm->timeout) {
+        && sr_timeout[id] == alrm->timeout) {
+      fprintf(stderr, "send it !!\n");
       // last_seq has already been registered
       send_mail_to_network_simulator(id, false);
     }
