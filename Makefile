@@ -11,7 +11,7 @@ send: sender
 	./sender ::1 2141 --file cin --delay 1000
 
 sendbiglorem: sender
-	./sender ::1 2141 --file biglorem --delay 1 --sber 100 --splr 100
+	./sender ::1 2141 --file biglorem --delay 1 --sber 500 --splr 500
 
 sendlittlelorem: sender
 	./sender ::1 2141 --file littlelorem --delay 1 --sber 10 --splr 10

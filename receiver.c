@@ -98,7 +98,8 @@ int main (int argc, char **argv) {
     {
         char hostname[NI_MAXHOST];
 
-        printf("f%d fam%d sock%d prot%d %d %d %d ai_canonname:%s\n", rp->ai_flags, rp->ai_family, rp->ai_socktype, rp->ai_protocol, rp->ai_addrlen, rp->ai_addr->sa_family, *(rp->ai_addr->sa_data), rp->ai_canonname);
+        if (verbose_flag)
+          printf("f%d fam%d sock%d prot%d %d %d %d ai_canonname:%s\n", rp->ai_flags, rp->ai_family, rp->ai_socktype, rp->ai_protocol, rp->ai_addrlen, rp->ai_addr->sa_family, *(rp->ai_addr->sa_data), rp->ai_canonname);
         int error = getnameinfo(rp->ai_addr, rp->ai_addrlen, hostname, NI_MAXHOST, NULL, 0, 0);
         if (error != 0)
         {
@@ -141,13 +142,16 @@ int main (int argc, char **argv) {
 
   /* Until we reach the end of the transmission */
   while (lastseq != lastack) {
-    fprintf(stderr, "LASTSEQ %d LASTACK %d\n", lastseq, lastack);
-	printf("len : %d\n", len);
+    if (verbose_flag) {
+      fprintf(stderr, "LASTSEQ %d LASTACK %d\n", lastseq, lastack);
+      printf("len : %lu\n", len);
+    }
 
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
-    printf("nread : %d\n", nread);
+    if (verbose_flag)
+      printf("nread : %ld\n", nread);
     if (nread == -1)
       continue; //Ignore failed request
 
@@ -156,11 +160,13 @@ int main (int argc, char **argv) {
     s = getnameinfo((struct sockaddr *) &peer_addr,
                     peer_addr_len, host, NI_MAXHOST,
                     service, NI_MAXSERV, NI_NUMERICSERV);
-    if (s == 0)
-      printf("Received %zd bytes from %s:%s\n",
+    if (s == 0) {
+      if (verbose_flag)
+        printf("Received %zd bytes from %s:%s\n",
              nread, host, service);
-    else
+    } else {
       fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+    }
 
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
@@ -169,12 +175,15 @@ int main (int argc, char **argv) {
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
 
     // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop
-    printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
+    if (verbose_flag)
+      printf("%u~%u==%u %lu <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
-      printf("Accepted !\n");
+      if (verbose_flag)
+        printf("Accepted !\n");
 
       if (len < PAYLOAD_SIZE) {
-        printf("LEN %u\n", len);
+        if (verbose_flag)
+          printf("LEN %lu\n", len);
         lastseq = *seq_num;
       }
 
@@ -182,19 +191,25 @@ int main (int argc, char **argv) {
        a receiving window size equal to zero */
       type = (*header >> WINDOW_SIZE);
       window = (*header & MAX_WIN_SIZE);
-      printf("type:%d==%d window==%d len==%d\n", type, PTYPE_DATA, window, len);
+      if (verbose_flag)
+        printf("type:%d==%d window==%d len==%lu\n", type, PTYPE_DATA, window, len);
       if (type == PTYPE_DATA && window==0 && len<=512) {
-        printf("Passed sanity check !\n");
+        if (verbose_flag)
+          printf("Passed sanity check !\n");
 
         /* A packet outside the receiving window is dropped */
-        printf("lastack_in_window : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", lastack_in_window, *seq_num, lastack_in_window+real_window_size, N);
-        printf("%d >= %d && %d <= %d\n", *seq_num, (lastack_in_window)%(N-1), *seq_num, (lastack_in_window+real_window_size)%(N-1));
+        if (verbose_flag)
+          printf("lastack_in_window : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", lastack_in_window, *seq_num, lastack_in_window+real_window_size, N);
+        if (verbose_flag)
+          printf("%d >= %d && %d <= %d\n", *seq_num, (lastack_in_window)%(N-1), *seq_num, (lastack_in_window+real_window_size)%(N-1));
 
         if (between_mod((lastack+1)%MAX_SEQ, (lastack+1+real_window_size)%MAX_SEQ, *seq_num )) {
-          printf("Inside receiving window !\n");
+          if (verbose_flag)
+            printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
           int slot_number = index_in_window(lastack, lastack_in_window, *seq_num);
-          printf("slot_number:%d\n", slot_number);
+          if (verbose_flag)
+            printf("slot_number:%d\n", slot_number);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
 
@@ -204,9 +219,11 @@ int main (int argc, char **argv) {
            */
           for (i=0; i < MAX_WIN_SIZE && buffer[(lastack_in_window + i + 1) % MAX_WIN_SIZE].received; i++) {
             int k = (lastack_in_window + i + 1) % MAX_WIN_SIZE;
-            printf("i = %d, k = %d!\n", i, k);
+            if (verbose_flag)
+              printf("i = %d, k = %d!\n", i, k);
             len = ntohs(*((uint16_t*)(buffer[k].data+2)));
-            printf("Write : fd : %d, payload : %s, len : %u!\n", fd, buffer[k].data + 4, (uint32_t) len);
+            if (verbose_flag)
+              printf("Write : fd : %d, payload : %s, len : %u!\n", fd, buffer[k].data + 4, (uint32_t) len);
             if (write(fd, buffer[k].data + 4, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
             }
@@ -221,11 +238,13 @@ int main (int argc, char **argv) {
         header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(crc_packet((struct packet*) &packet[0]));
-        fprintf(stderr, "%d %u\n", *seq_num, crc);
+        if (verbose_flag)
+          fprintf(stderr, "%d %u\n", *seq_num, *crc);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
         }
-        printf("Ack sent !\n");
+        if (verbose_flag)
+          printf("Ack sent !\n");
       }
     }
   }
