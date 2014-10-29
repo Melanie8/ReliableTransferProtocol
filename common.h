@@ -18,7 +18,6 @@
 
 #define SEQNUM_SIZE 8
 #define MAX_SEQ (1 << SEQNUM_SIZE)
-/* CA SERAIT PEUT-ETRE PAS MAL DE FAIRE DES DEFINE POUR LES TAILLES DE CHAQUE CHAMP EN FAIT POUR QUE CA SOIT PLUS GENERIQUE */
 
 #define WINDOW_SIZE 5
 #define MAX_WIN_SIZE ((1 << WINDOW_SIZE) - 1)
@@ -40,6 +39,7 @@ void read_args (int argc, char **argv, char **filename, int *sber, int *splr, in
  */
 int get_fd (const char *filename, bool write);
 
+/* Modelisation of a packet : contains pointers towards each field of a packet */
 struct packet {
   uint8_t type_and_window_size;
   uint8_t seq;
@@ -51,13 +51,17 @@ struct packet {
 /* Closes a file descriptor. */
 void close_fd (int fd);
 
-/* */
+/* Computes the CRC of the header + payload of a packet */
 uint32_t crc_packet(const struct packet *pack);
 
 bool valid_ack(struct packet *p);
 
+/* Checks whether the third argument is between the two first one in modulo */
 bool between_mod (int, int, int);
 
+/* Computes the index in the window of the sequence number i, 
+ * given lastack (x) and lastack_in_window
+ */
 int index_in_window (int x, int x_in_window, int i);
 
 #endif
