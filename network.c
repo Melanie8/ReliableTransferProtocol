@@ -119,7 +119,7 @@ bool network (struct message *m) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     if (sm->last) {
       last_seq = sm->p->seq;
-      printf("last_seq : %d\n", last_seq);
+      fprintf(stderr, "LAST_SEQ : %d\n", last_seq);
     }
     if ((rand() % 1000) >= splr) {
       if ((rand() % 1000) < sber) {

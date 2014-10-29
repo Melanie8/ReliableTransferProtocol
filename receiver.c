@@ -141,6 +141,7 @@ int main (int argc, char **argv) {
 
   /* Until we reach the end of the transmission */
   while (lastseq != lastack) {
+    fprintf(stderr, "LASTSEQ %d LASTACK %d\n", lastseq, lastack);
 	printf("len : %d\n", len);
 
     /* Packet reception */
@@ -164,18 +165,18 @@ int main (int argc, char **argv) {
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
-    
-    if (len < PAYLOAD_SIZE)
-      lastseq = seq_num;
-    
+
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
 
     // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
-    if (ntohl(*crc) != expected_crc && len < PAYLOAD_SIZE) {
-    }
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
       printf("Accepted !\n");
+
+      if (len < PAYLOAD_SIZE) {
+        printf("LEN %u\n", len);
+        lastseq = *seq_num;
+      }
 
       /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
        a receiving window size equal to zero */
