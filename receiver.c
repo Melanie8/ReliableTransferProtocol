@@ -26,15 +26,22 @@
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
 char packet[PACKET_SIZE];           // a received packet
-char *header, *payload;   // pointers to the different areas of the packet
+char *header, *payload;             // pointers to the different areas of the packet
 uint8_t *seq_num;
 uint16_t *payload_len;
 uint32_t *crc;
-struct slot buffer[MAX_WIN_SIZE];    // the receiving buffer containing out of sequence packets
-int lastack;                       // sequence number of the last acknowledged packet
-int lastack_in_window;            // a quel sequence number correspond le début de ma window
+struct slot buffer[MAX_WIN_SIZE];   // the receiving buffer containing out of sequence packets
+int lastack;                        // sequence number of the last in sequence acknowledged packet
+int lastack_in_window;              // at which sequence number corresponds the start of the window
 char real_window_size;              // the current size of the receiving window
-int lastseq;                        // variable qui vaut -1 au début, devient le seqnum du dernier packet, stop programme quand = lastack
+int lastseq;                        // useful variable to know when to stop the receiver : = -1 at the beginning,
+                                    // becomes the seqnum of the last packet, stop when lastack = lastseq
+
+/* Slot in the receiving buffer */
+struct slot {
+  bool received;
+  char data[PACKET_SIZE];
+};
 
 int main (int argc, char **argv) {
   /* Initialisation of the variables */
@@ -73,8 +80,6 @@ int main (int argc, char **argv) {
 
   memset(&hints, 0, sizeof(struct addrinfo));
   hints.ai_family = AF_UNSPEC;
-  //hints.ai_flags = AI_PASSIVE | AI_ALL;    /* For wildcard IP address */
-  // I have specified the hostname so no wildcard.
   hints.ai_protocol = IPPROTO_UDP;
 
   err = getaddrinfo(hostname, port, &hints, &result);
@@ -115,6 +120,7 @@ int main (int argc, char **argv) {
 
   /* Until we reach the end of the transmission */
   while (!panic && lastseq != lastack) {
+
     if (verbose_flag) {
       printf("LASTSEQ %d LASTACK %d\n", lastseq, lastack);
       printf("len : %lu\n", len);
@@ -145,9 +151,6 @@ int main (int argc, char **argv) {
     len = ntohs(*payload_len);
     uint32_t expected_crc = crc_packet((struct packet*) &packet[0]);
 
-    // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
-
-    // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop
     if (verbose_flag)
       printf("%u~%u==%u %lu <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
     if (ntohl(*crc) == expected_crc && len <= PAYLOAD_SIZE) {
@@ -218,6 +221,8 @@ int main (int argc, char **argv) {
           printf("Ack sent !\n");
       }
     }
+    
+    // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
   }
 
   close_fd(fd);
