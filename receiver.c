@@ -43,9 +43,9 @@ int main (int argc, char **argv) {
   payload = header + 4;
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  lastack = MAX_WIN_SIZE - 1;
+  lastack = BUFFER_SIZE - 1;
   start_window_seqnum = 0;
-  real_window_size = BUFFER_SIZE;
+  real_window_size = MAX_WIN_SIZE;
   int i;
   for (i=0; i<BUFFER_SIZE; i++) {
     buffer[i].received = false;
@@ -175,7 +175,7 @@ int main (int argc, char **argv) {
       /* Sanity check : the receiver only receives DATA packets of size <= 512 bytes with
        a receiving window size equal to zero */
       type = (*header >> WINDOW_SIZE);
-      window = (*header & BUFFER_SIZE);
+      window = (*header & MAX_WIN_SIZE);
       printf("type:%d==%d window==%d len==%d\n", type, PTYPE_DATA, window, len);
       if (type == PTYPE_DATA && window==0 && len<=512) {
         printf("Passed sanity check !\n");
@@ -205,13 +205,13 @@ int main (int argc, char **argv) {
             }
             buffer[i].received = false;
           }
-          lastack = (lastack+i)%MAX_WIN_SIZE;
+          lastack = (lastack+i)%BUFFER_SIZE;
           start_window_seqnum = (start_window_seqnum+i)%(N-1);
         }
 
         /* An acknowledgement is sent */
         *seq_num = lastack;
-        header[0] = (PTYPE_ACK << WINDOW_SIZE) | BUFFER_SIZE;
+        header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(rc_crc32((struct packet*) &packet[0]));
         printf("%d %u\n", *seq_num, crc);
