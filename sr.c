@@ -62,7 +62,7 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 }
 
 // FIXME we shouldn't have to add BUFFER_SIZE here
-#define INDEX_IN_WINDOW(x) ((BUFFER_SIZE + (x) - window_start + start_in_window) % BUFFER_SIZE)
+#define INDEX_IN_WINDOW(x) index_in_window(window_start, start_in_window, (x))
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
@@ -146,11 +146,11 @@ bool selective_repeat (struct message *m) {
         fprintf(stderr, "%d->%d <= %d <= %d (%d)\n", window_start, i, p->seq, (i + window_size) % MAX_SEQ, INDEX_IN_WINDOW(i));
         status[INDEX_IN_WINDOW(i)] = ack_status_acked;
       }
-      while (status[window_start] == ack_status_acked) {
-        free(packets[window_start]);
-        packets[window_start] = NULL;
-        status[window_start] = ack_status_none;
-        timeout[window_start] = -1;
+      while (status[start_in_window] == ack_status_acked) {
+        free(packets[start_in_window]);
+        packets[start_in_window] = NULL;
+        status[start_in_window] = ack_status_none;
+        timeout[start_in_window] = -1;
         fprintf(stderr, "%d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
         start_in_window = (start_in_window + 1) % BUFFER_SIZE;

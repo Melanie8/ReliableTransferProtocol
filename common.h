@@ -61,4 +61,6 @@ bool valid_ack(struct packet *p);
 
 bool between_mod (int, int, int);
 
+int index_in_window (int x, int x_in_window, int i);
+
 #endif

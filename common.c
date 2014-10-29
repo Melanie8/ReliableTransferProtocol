@@ -261,3 +261,11 @@ bool between_mod (int a, int b, int m) {
     return m >= a || m < b;
   }
 }
+
+int index_in_window (int x, int x_in_window, int i) {
+  if (i < x) {
+    return (i + (MAX_SEQ - x) + x_in_window) % MAX_WIN_SIZE;
+  } else {
+    return (i - x + x_in_window) % MAX_WIN_SIZE;
+  }
+}

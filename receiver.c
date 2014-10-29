@@ -30,9 +30,9 @@ char *header, *payload;   // pointers to the different areas of the packet
 uint8_t *seq_num;
 uint16_t *payload_len;
 uint32_t *crc;
-struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
+struct slot buffer[MAX_WIN_SIZE];    // the receiving buffer containing out of sequence packets
 int lastack;                       // sequence number of the last acknowledged packet
-int start_window_seqnum;            // a quel sequence number correspond le début de ma window
+int lastack_in_window;            // a quel sequence number correspond le début de ma window
 char real_window_size;              // the current size of the receiving window
 
 int main (int argc, char **argv) {
@@ -43,11 +43,11 @@ int main (int argc, char **argv) {
   payload = header + 4;
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  lastack = BUFFER_SIZE - 1;
-  start_window_seqnum = 0;
+  lastack = MAX_SEQ - 1;
+  lastack_in_window = MAX_WIN_SIZE - 1;
   real_window_size = MAX_WIN_SIZE;
   int i;
-  for (i=0; i<BUFFER_SIZE; i++) {
+  for (i=0; i<MAX_WIN_SIZE; i++) {
     buffer[i].received = false;
   }
 
@@ -144,7 +144,7 @@ int main (int argc, char **argv) {
     /* Packet reception */
     nread = recvfrom(sfd, packet, PACKET_SIZE, 0,
                      (struct sockaddr *) &peer_addr, &peer_addr_len);
-    printf("nread : %d\n", nread);                 
+    printf("nread : %d\n", nread);
     if (nread == -1)
       continue; //Ignore failed request
 
@@ -162,10 +162,10 @@ int main (int argc, char **argv) {
     /* If the CRC is not correct, the packet is dropped */
     len = ntohs(*payload_len);
     uint32_t expected_crc = rc_crc32((struct packet*) &packet[0]);
-    
+
     // FIXME attendre un peu avant de qui pour si jamais le dernier ACK a ete perdu
-    
-    // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop 
+
+    // If the CRC is not correct but len < PAYLOAD_SIZE, don't stop
     printf("%lu~%lu==%lu %d <= %d\n", *crc, ntohl(*crc), expected_crc, len, PAYLOAD_SIZE);
     if (ntohl(*crc) != expected_crc && len < PAYLOAD_SIZE) {
     }
@@ -179,15 +179,15 @@ int main (int argc, char **argv) {
       printf("type:%d==%d window==%d len==%d\n", type, PTYPE_DATA, window, len);
       if (type == PTYPE_DATA && window==0 && len<=512) {
         printf("Passed sanity check !\n");
-        
-        /* A packet outside the receiving window is dropped */
-        printf("start_window_seqnum : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", start_window_seqnum, *seq_num, start_window_seqnum+real_window_size, N);
-        printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
 
-        if (between_mod((start_window_seqnum)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
+        /* A packet outside the receiving window is dropped */
+        printf("lastack_in_window : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", lastack_in_window, *seq_num, lastack_in_window+real_window_size, N);
+        printf("%d >= %d && %d <= %d\n", *seq_num, (lastack_in_window)%(N-1), *seq_num, (lastack_in_window+real_window_size)%(N-1));
+
+        if (between_mod((lastack+1)%MAX_SEQ, (lastack+1+real_window_size)%MAX_SEQ, *seq_num )) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
-          int slot_number = (*seq_num - start_window_seqnum);
+          int slot_number = index_in_window(lastack, lastack_in_window, *seq_num);
           printf("slot_number:%d\n", slot_number);
           buffer[slot_number].received = true;
           memcpy(buffer[slot_number].data, header, PACKET_SIZE);
@@ -196,17 +196,18 @@ int main (int argc, char **argv) {
            * The payload of these packets are delivered to the user.
            * Lastack and the receiving window are updated.
            */
-          for (i=0; buffer[i].received; i++) {
-            printf("i = %d!\n", i);
-            len = ntohs(*((uint16_t*)(buffer[i].data+2)));
-            printf("Write : fd : %d, payload : %s, len : %u!\n", fd, payload, (uint32_t) len);
-            if (write(fd, payload, len) != len) {
+          for (i=0; i < MAX_WIN_SIZE && buffer[(lastack_in_window + i + 1) % MAX_WIN_SIZE].received; i++) {
+            int k = (lastack_in_window + i + 1) % MAX_WIN_SIZE;
+            printf("i = %d, k = %d!\n", i, k);
+            len = ntohs(*((uint16_t*)(buffer[k].data+2)));
+            printf("Write : fd : %d, payload : %s, len : %u!\n", fd, buffer[k].data + 4, (uint32_t) len);
+            if (write(fd, buffer[k].data + 4, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
             }
-            buffer[i].received = false;
+            buffer[k].received = false;
           }
-          lastack = (lastack+i)%BUFFER_SIZE;
-          start_window_seqnum = (start_window_seqnum+i)%(N-1);
+          lastack = (lastack+i)%MAX_SEQ;
+          lastack_in_window = (lastack_in_window+i)%MAX_WIN_SIZE;
         }
 
         /* An acknowledgement is sent */
