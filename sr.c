@@ -64,14 +64,6 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET packets[CUR_IN_WINDOW]
 
-bool between_mod (int a, int b, int m) {
-  if (a < b) {
-    return m >= a && m < b;
-  } else {
-    return m >= a || m < b;
-  }
-}
-
 void check_send () {
   //printf("check_send %d %d %d %d\n", start_in_window, CUR_IN_WINDOW, window_size, fd);
   while (fd > 0 && between_mod(start_in_window, (start_in_window + window_size) % MAX_WIN_SIZE, CUR_IN_WINDOW)) {

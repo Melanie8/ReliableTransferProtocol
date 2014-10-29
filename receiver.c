@@ -26,7 +26,8 @@
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
 char packet[PACKET_SIZE];           // a received packet
-char *header, *seq_num, *payload;   // pointers to the different areas of the packet
+char *header, *payload;   // pointers to the different areas of the packet
+uint8_t *seq_num;
 uint16_t *payload_len;
 uint32_t *crc;
 struct slot buffer[BUFFER_SIZE];    // the receiving buffer containing out of sequence packets
@@ -38,11 +39,11 @@ int main (int argc, char **argv) {
 
   /* Initialisation of the variables */
   header = (char *) packet;
-  seq_num = (char *) (header + 1);
+  seq_num = (uint8_t *) (header + 1);
   payload = header + 4;
   payload_len = (uint16_t *) (header + 2);
   crc = (uint32_t *) (payload + 512);
-  lastack = N-1;
+  lastack = MAX_WIN_SIZE - 1;
   start_window_seqnum = 0;
   real_window_size = BUFFER_SIZE;
   int i;
@@ -177,9 +178,10 @@ int main (int argc, char **argv) {
         printf("Passed sanity check !\n");
         
         /* A packet outside the receiving window is dropped */
-        printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum+1)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
+        printf("start_window_seqnum : %d, seq_num : %d, end_window_seqnum : %d, N : %d\n", start_window_seqnum, *seq_num, start_window_seqnum+real_window_size, N);
+        printf("%d >= %d && %d <= %d\n", *seq_num, (start_window_seqnum)%(N-1), *seq_num, (start_window_seqnum+real_window_size)%(N-1));
         // FIXME FAUX, utilise between_mod comme j'ai fait pour sr.c
-        if (between_mod((start_window_seqnum+1)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
+        if (between_mod((start_window_seqnum)%(N-1), (start_window_seqnum+real_window_size)%(N-1), *seq_num )) {
           printf("Inside receiving window !\n");
           /* The good packets are placed in the receive buffer */
           int slot_number = (*seq_num - start_window_seqnum);

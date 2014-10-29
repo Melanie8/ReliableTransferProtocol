@@ -10,16 +10,16 @@
 #include "mailbox.h"
 #include "error.h"
 
-struct letter {
-  struct message *m;
-  struct letter *next;
-};
-
 struct mailbox {
   struct letter *next;
   struct letter *last;
   pthread_mutex_t lock;
   sem_t *size;
+};
+
+struct letter {
+  struct message *m;
+  struct letter *next;
 };
 
 struct mailbox *new_mailbox () {

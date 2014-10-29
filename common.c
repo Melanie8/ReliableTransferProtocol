@@ -253,3 +253,11 @@ bool valid_ack(struct packet *p) {
   return (expected_crc == ntohl(p->crc) &&
       (p->type_and_window_size >> WINDOW_SIZE) == PTYPE_ACK);
 }
+
+bool between_mod (int a, int b, int m) {
+  if (a < b) {
+    return m >= a && m < b;
+  } else {
+    return m >= a || m < b;
+  }
+}
