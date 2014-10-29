@@ -187,14 +187,14 @@ int get_fd (const char *filename, bool write) {
     }
     if (fd < 0) {
       myperror("open");
-      exit(EXIT_FAILURE);
+      return -1;
     }
     return fd;
   }
 }
 
 void close_fd (int fd) {
-  if (fd != STDOUT_FILENO && fd != STDIN_FILENO) {
+  if (fd >= 0 && fd != STDOUT_FILENO && fd != STDIN_FILENO) {
     int err = close(fd);
     if (err < 0) {
       myperror("close");

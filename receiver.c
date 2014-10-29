@@ -37,7 +37,6 @@ char real_window_size;              // the current size of the receiving window
 int lastseq;                        // variable qui vaut -1 au début, devient le seqnum du dernier packet, stop programme quand = lastack
 
 int main (int argc, char **argv) {
-
   /* Initialisation of the variables */
   header = (char *) packet;
   seq_num = (uint8_t *) (header + 1);
@@ -67,8 +66,8 @@ int main (int argc, char **argv) {
   // |___\___/
 
   struct addrinfo hints;
-  struct addrinfo *result, *rp;
-  int sfd, s;
+  struct addrinfo *result = NULL, *rp = NULL;
+  int sfd = 0, err = 0, fd = -1;
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len;
 
@@ -78,38 +77,35 @@ int main (int argc, char **argv) {
   // I have specified the hostname so no wildcard.
   hints.ai_protocol = IPPROTO_UDP;
 
-  s = getaddrinfo(hostname, port, &hints, &result);
-  if (s != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
-    exit(EXIT_FAILURE);
+  err = getaddrinfo(hostname, port, &hints, &result);
+  if (err != 0) {
+    mygaierror(err, "getaddrinfo");
+  } else {
+
+    /* getaddrinfo() returns a list of address structures.
+       Try each address until we successfully bind(2).
+       If socket(2) (or bind(2)) fails, we (close the socket
+       and) try the next address. */
+
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+      sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+      if (sfd == -1)
+        continue;
+
+      if (bind(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
+        break;                  /* Success */
+
+      close(sfd);
+    }
+
+    freeaddrinfo(result);           /* No longer needed */
+
+    if (rp == NULL) {               /* No address succeeded */
+      myserror("Could not bind :(");
+    } else {
+      fd = get_fd(filename, true);
+    }
   }
-
-  /* getaddrinfo() returns a list of address structures.
-     Try each address until we successfully bind(2).
-     If socket(2) (or bind(2)) fails, we (close the socket
-     and) try the next address. */
-
-  for (rp = result; rp != NULL; rp = rp->ai_next) {
-    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-    if (sfd == -1)
-      continue;
-
-    if (bind(sfd, rp->ai_addr, rp->ai_addrlen) != -1)
-      break;                  /* Success */
-
-    close(sfd);
-  }
-
-  if (rp == NULL) {               /* No address succeeded */
-    fprintf(stderr, "Could not bind :(\n");
-    exit(EXIT_FAILURE);
-  }
-
-  freeaddrinfo(result);           /* No longer needed */
-
-  /* Read datagrams and echo them back to sender */
-
-  int fd = get_fd(filename, true);
 
   size_t len = PAYLOAD_SIZE;
   ssize_t nread = 0;
@@ -117,11 +113,10 @@ int main (int argc, char **argv) {
 
   peer_addr_len = sizeof(struct sockaddr_storage);
 
-
   /* Until we reach the end of the transmission */
-  while (lastseq != lastack) {
+  while (!panic && lastseq != lastack) {
     if (verbose_flag) {
-      fprintf(stderr, "LASTSEQ %d LASTACK %d\n", lastseq, lastack);
+      printf("LASTSEQ %d LASTACK %d\n", lastseq, lastack);
       printf("len : %lu\n", len);
     }
 
@@ -135,15 +130,16 @@ int main (int argc, char **argv) {
 
     /* Identification of the host name of the sender and the service name associated with its port number */
     char host[NI_MAXHOST], service[NI_MAXSERV];
-    s = getnameinfo((struct sockaddr *) &peer_addr,
+    err = getnameinfo((struct sockaddr *) &peer_addr,
                     peer_addr_len, host, NI_MAXHOST,
                     service, NI_MAXSERV, NI_NUMERICSERV);
-    if (s == 0) {
+    err = -1;
+    if (err == 0) {
       if (verbose_flag)
         printf("Received %zd bytes from %s:%s\n",
              nread, host, service);
     } else {
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+      mygaierror(err, "getnameinfo");
     }
 
     /* If the CRC is not correct, the packet is dropped */
@@ -200,6 +196,7 @@ int main (int argc, char **argv) {
               printf("Write : fd : %d, payload : %s, len : %u!\n", fd, buffer[k].data + 4, (uint32_t) len);
             if (write(fd, buffer[k].data + 4, len) != len) {
               fprintf(stderr, "Error writing the payload in the file\n");
+              myperror("write");
             }
             buffer[k].received = false;
           }
@@ -208,14 +205,15 @@ int main (int argc, char **argv) {
         }
 
         /* An acknowledgement is sent */
-        *seq_num = (lastack+1)%MAX_SEQ;
+        *seq_num = (lastack+1) % MAX_SEQ;
         header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(crc_packet((struct packet*) &packet[0]));
         if (verbose_flag)
-          fprintf(stderr, "%d %u\n", *seq_num, *crc);
+          printf("%d %u\n", *seq_num, *crc);
         if (sendto(sfd, packet, PACKET_SIZE, 0, (struct sockaddr *) &peer_addr, peer_addr_len) != PACKET_SIZE) {
           fprintf(stderr, "Error sending response\n");
+          myperror("sendto");
         }
         if (verbose_flag)
           printf("Ack sent !\n");
@@ -225,5 +223,5 @@ int main (int argc, char **argv) {
 
   close_fd(fd);
 
-  exit(EXIT_SUCCESS);
+  exit(panic ? EXIT_FAILURE : EXIT_SUCCESS);
 }
