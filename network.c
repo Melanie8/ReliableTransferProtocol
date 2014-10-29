@@ -34,21 +34,14 @@ struct network_message *last;
 void send_scheduled_sending () {
   // avoid overhead of calling it too many times
   long t = get_time_usec();
-  /*printf("network let's go !!!\n");
-  if (first != NULL) {
-    printf("network let's go !!! %ld %ld\n", first->time, t);
-  }*/
   while (first != NULL && first->time <= t) {
-    //printf("network let's goo !!!\n");
     if (first->ack) {
-    //printf("network let's gooa !!!\n");
       struct message *m = (struct message*) malloc(sizeof(struct message));
       m->type = ACK_MESSAGE_TYPE;
       m->data = first->p;
       printf("network send     %d to SR\n", m->type);
       send_mail(sr_inbox, m);
     } else {
-      //printf("network let's gooo !!!\n");
       // TODO do an agent that send because here we make the ack
       // waits while we are sending..
       if (write(sfd, first->p, PACKET_SIZE) != PACKET_SIZE) {
@@ -74,7 +67,6 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // that way we are also sure that they are put in order in the list
   
   nm->time = get_time_usec() + (long) delay;
-  //printf("network wait -> %ld\n", nm->time);
   nm->p = sm->p;
   nm->ack = ack;
   nm->next = NULL;
@@ -119,7 +111,7 @@ bool network (struct message *m) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     if (sm->last) {
       last_seq = (sm->p->seq + 1) % MAX_SEQ;
-      fprintf(stderr, "LAST_SEQ : %d\n", last_seq);
+      printf("LAST_SEQ : %d\n", last_seq);
     }
     if ((rand() % 1000) >= splr) {
       if ((rand() % 1000) < sber) {
@@ -127,12 +119,11 @@ bool network (struct message *m) {
       }
       schedule_sending(sm, false);
     } else {
-      fprintf(stderr, "network DROPPED\n");
+      printf("network DROPPED packet %d\n", sm->p->seq);
     }
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct simulator_message *sm = (struct simulator_message *) m->data;
     schedule_sending(sm, true);
-    printf("last_ack : %d cur_ack : %d\n", last_seq, sm->p->seq);
     if (valid_ack(sm->p) && last_seq != -1 && sm->p->seq == last_seq) {
       continue_acking = false;
     }

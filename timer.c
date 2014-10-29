@@ -85,16 +85,13 @@ struct mailbox *inbox[N_TIMER];
 void check_timers () {
   while (n > 0 && timer_timeout[top_heap()] <= get_time_usec()) {
     int id = poll_heap();
-    //printf("%d polled\n", id);
     struct message *m = (struct message *) malloc(sizeof(struct message));
     m->type = TIMEOUT_MESSAGE_TYPE;
     struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
     alrm->id = id;
     alrm->timeout = timer_timeout[id];
-    printf("timer   timeout  %d:%ld\n", id, timer_timeout[id]);
     alrm->inbox = NULL;
     m->data = alrm;
-    printf("timer   send     %d to ?\n", m->type);
     send_mail(inbox[id], m);
     timer_timeout[id] = 0;
     inbox[id] = NULL;
@@ -106,7 +103,6 @@ bool timer (struct message *m) {
     printf("timer   receives %d\n", m->type);
     if (m->type == INIT_MESSAGE_TYPE) {
       struct timer_init *init = (struct timer_init*) m->data;
-      //printf("%p\n", init);
       delay = init->delay;
       int i;
       for (i = 0; i < N_TIMER; i++) {
@@ -116,23 +112,17 @@ bool timer (struct message *m) {
       assert(m->type == ALARM_MESSAGE_TYPE);
       struct alarm *alrm = (struct alarm *) m->data;
       timer_timeout[alrm->id] = alrm->timeout;
-      //printf("inbox::%p\n", inbox[alrm->id]);
       inbox[alrm->id] = alrm->inbox;
-      //printf("inbox:%d:%p:%ld\n", alrm->id, inbox[alrm->id], alrm->timeout);
       push_heap(alrm->id);
       int i;
-      /*for (i = 0; i < n; i++) {
-        printf("%d\n", key[i]);
-      }*/
     }
   } else {
     printf("timer   receives NULL\n");
-    // the minimum time that can be asked is MIN(delay*MILLION, 3*delay*MILLION) = delay*MILLION
+    // the minimum time that can be asked is MIN(delay, 3*delay) = delay
     int time_to_sleep = delay;
     if (n > 0) {
       time_to_sleep = MIN(time_to_sleep, timer_timeout[top_heap()]);
     }
-    //printf("%d %d %d %ld\n", delay, time_to_sleep, top_heap(), timeout[top_heap()]);
     int err = usleep(time_to_sleep);
     // TODO errors
   }

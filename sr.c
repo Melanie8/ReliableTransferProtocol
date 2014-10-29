@@ -44,7 +44,7 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   sm->p = packets[id_in_window];
   sm->last = last;
   m->data = sm;
-  printf("SR        sends     %d to network\n", m->type);
+  printf("SR      sends    %d to network\n", m->type);
   send_mail(network_inbox, m);
   status[id_in_window] = ack_status_sent;
 
@@ -53,13 +53,11 @@ void send_mail_to_network_simulator (int id_in_window, bool last) {
   struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
   alrm->id = id_in_window * 3 + 2;
   alrm->timeout = get_time_usec() + ((long) delay) * 3;
-  fprintf(stderr, "%d--- %ld\n", id_in_window, sr_timeout[id_in_window]);
   sr_timeout[id_in_window] = alrm->timeout;
-  fprintf(stderr, "%d--- %ld\n", id_in_window, sr_timeout[id_in_window]);
   alrm->inbox = sr_inbox;
   //printf("inbox:%p\n", network_inbox);
   m->data = alrm;
-  printf("SR        sends     %d to timer\n", m->type);
+  printf("SR      sends    %d to timer\n", m->type);
   send_mail(timer_inbox, m);
 }
 
@@ -109,11 +107,11 @@ void check_send () {
     m_timer->data = NULL;
     m_self->type = STOP_MESSAGE_TYPE;
     m_self->data = NULL;
-    printf("SR      sends    %d to network\n", m_network->type);
+    printf("SR    sends     %d to network\n", m_network->type);
     send_mail(network_inbox, m_network);
-    printf("SR      sends    %d to timer\n", m_timer->type);
+    printf("SR    sends     %d to timer\n", m_timer->type);
     send_mail(timer_inbox, m_timer);
-    printf("SR      sends    %d to sr\n", m_self->type);
+    printf("SR    sends     %d to sr\n", m_self->type);
     send_mail(sr_inbox, m_self);
   }
 }
@@ -136,7 +134,7 @@ bool selective_repeat (struct message *m) {
   } else if (m->type == ACK_MESSAGE_TYPE) {
     struct packet *p = (struct packet *) m->data;
     if (valid_ack(p)) {
-      printf("SR    valid ack seq:%d %ld\n", p->seq, get_time_usec());
+      printf("SR      valid ack seq:%d\n", p->seq);
       int i = 0;
       int lastack = (p->seq + MAX_SEQ - 1) % MAX_SEQ;
       for (i = window_start; between_mod(i, (i + window_size) % MAX_SEQ, lastack); i++) {
@@ -147,13 +145,13 @@ bool selective_repeat (struct message *m) {
         packets[start_in_window] = NULL;
         status[start_in_window] = ack_status_none;
         sr_timeout[start_in_window] = -1;
-        printf("window_star: %d",window_start);
+        printf("window_start : %d",window_start);
         window_start = (window_start + 1) % MAX_SEQ;
         start_in_window = (start_in_window + 1) % MAX_WIN_SIZE;
         printf("->%d\n",window_start);
       }
     } else {
-      printf("SR  invalid ack seq:%d\n", p->seq);
+      printf("SR      invalid ack seq:%d\n", p->seq);
     }
     check_send();
   } else {
