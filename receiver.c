@@ -20,8 +20,13 @@
 //#include <zlib.h>
 
 #include "error.h"
-#include "receiver.h"
 #include "common.h"
+
+/* Slot in the receiving buffer */
+struct slot {
+  bool received;
+  char data[PACKET_SIZE];
+};
 
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
@@ -36,12 +41,6 @@ int lastack_in_window;              // at which sequence number corresponds the 
 char real_window_size;              // the current size of the receiving window
 int lastseq;                        // useful variable to know when to stop the receiver : = -1 at the beginning,
                                     // becomes the seqnum of the last packet, stop when lastack = lastseq
-
-/* Slot in the receiving buffer */
-struct slot {
-  bool received;
-  char data[PACKET_SIZE];
-};
 
 int main (int argc, char **argv) {
   /* Initialisation of the variables */

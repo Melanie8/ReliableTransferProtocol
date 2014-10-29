@@ -151,7 +151,15 @@ bool network (struct message *m) {
     send_scheduled_sending();
   } else {
     assert(m->type == STOP_MESSAGE_TYPE);
-    // TODO free NM's
+    while (first != NULL) {
+      struct network_message *oldfirst = first;
+      first = first->next;
+      if (oldfirst->ack) {
+        free(oldfirst->p);
+      }
+      free(oldfirst);
+    }
+    last = NULL;
   }
   return true;
 }
