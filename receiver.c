@@ -217,7 +217,7 @@ int main (int argc, char **argv) {
         }
 
         /* An acknowledgement is sent */
-        *seq_num = lastack;
+        *seq_num = (lastack+1)%MAX_SEQ;
         header[0] = (PTYPE_ACK << WINDOW_SIZE) | MAX_WIN_SIZE;
         memset(payload, 0, PAYLOAD_SIZE);
         *crc = htonl(rc_crc32((struct packet*) &packet[0]));

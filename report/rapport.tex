@@ -135,14 +135,14 @@
 
 \subsection{Sender}
 
-We choose to create several agents responsible for different aspects of the sender and each running in a different thread so that these aspects can run in parallel.
-\paragraph{Timer} This agent s responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to the Timer. It sends it a message and the Timer will take care to prevent it once the time expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send datas and receive acknowledgments.
-
-Nous avons choisi de créer plusieurs agents chargés de différents aspects du sender et tournant chacun dans un thread différent pour que ces aspects distincts puissent s'exécuter en parallèle.
-\paragraph{Timer} Cet agent qui se charge de tout ce qui concerne le temps. Quand un autre agent veut lancer une alarme qui expirera à un certain temps $t$, il délègue le travail au Timer. Il lui envoie un message et celui-ci se chargera de le prévenir une fois le délais écoulé. Le Timer est utile aussi bien pour implémenter les retransmission timer et que pour simuler les délais d'envoi des datas et de réception des acknowledgements.
-\paragraph{Network Simulator} Cet agent est celui qui est réellement chargé de faire des \texttt{send()}.
-\paragraph{Acker} Cet agent est celui qui fait les \texttt{recvfrom()}.
-\paragraph{Selective repeat} Cet agent se charge de lire dans le fichier à envoyer et d'en faire des packets que le Network Simulator enverra. Il gère donc aussi la sending window. Il est tenu courant des acknowlegements reçus grâce au Acker, qui transmet l'information au Network Simulator, qui la fait parvenir au Selective Repeat.
+We choose to create several agents responsible for different aspects of the sender. Each agent runs in a different thread so that these aspects can run in parallel and they communicate with each other via a mailbox system we made (we associate with each agent a linked list of new messages).
+\begin{itemize}
+\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to the Timer. It sends it a message and the Timer will take care to prevent it once the time expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send datas and receive acknowledgments.
+\item \textbf{Network Simulator} This agent is the one who calls the function \texttt{sendto()}.
+\item \textbf{Acker} This agent is the one who calls the function \texttt{recvfrom()}.
+\item \textbf{Selective repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. So it also manages the sending window. It is held aware of acknowledgments received by the Acker, which transmits the information to Network Simulator, which sends it to the Selective Repeat.
+\end{itemize}
+The Figure ?? illustrates the interactions between those agents. 
 
 \subsection{Receiver}
 pas de recopiage dans buffer, joujou avec deux index
