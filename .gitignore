@@ -6,7 +6,6 @@ receiver
 *.fdb_latexmk
 *.fls
 *.log
-in
 out
 *.pdf
 *.swp
