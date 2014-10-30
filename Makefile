@@ -11,10 +11,10 @@ send: sender
 	./sender ::1 2141 --file cin --delay 1000 --sber 600
 
 sendbiglorem: sender
-	./sender ::1 2141 --file biglorem --delay 1 --sber 500 --splr 500
+	./sender ::1 2141 --file biglorem --delay 10 --sber 500 --splr 500
 
 sendlittlelorem: sender
-	./sender ::1 2141 --file littlelorem --delay 1 --sber 10 --splr 10
+	./sender ::1 2141 --file littlelorem --delay 10 --sber 900 --splr 900
 
 receive: receiver
 	./receiver :: 2141 --file out

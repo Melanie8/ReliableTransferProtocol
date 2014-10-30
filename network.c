@@ -16,21 +16,21 @@ struct network_message {
   bool ack;
 };
 
-int sber;
-int splr;
-int sfd;
-int delay;
-struct mailbox *acker_inbox;
-struct mailbox *sr_inbox;
-struct mailbox *timer_inbox;
-struct mailbox *network_inbox;
-int last_seq;
-bool continue_acking;
-bool verbose_flag;
+static int sber;
+static int splr;
+static int sfd;
+static int delay;
+static struct mailbox *acker_inbox;
+static struct mailbox *sr_inbox;
+static struct mailbox *timer_inbox;
+static struct mailbox *network_inbox;
+static int last_seq;
+static bool continue_acking;
+static bool verbose_flag;
 
 // initialized to 0 (i.e. NULL)
-struct network_message *first;
-struct network_message *last;
+static struct network_message *first;
+static struct network_message *last;
 
 void send_scheduled_sending () {
   // avoid overhead of calling it too many times

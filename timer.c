@@ -7,8 +7,8 @@
 #include "common.h"
 #include "timer.h"
 
-int delay;
-bool verbose_flag;
+static int delay;
+static bool verbose_flag;
 
 long get_time_usec () {
   struct timeval now;

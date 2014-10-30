@@ -30,16 +30,16 @@ struct slot {
 
 static int verbose_flag = 0;        // flag set by ‘--verbose’
 
-char packet[PACKET_SIZE];           // a received packet
-char *header, *payload;             // pointers to the different areas of the packet
-uint8_t *seq_num;
-uint16_t *payload_len;
-uint32_t *crc;
-struct slot buffer[MAX_WIN_SIZE];   // the receiving buffer containing out of sequence packets
-int lastack;                        // sequence number of the last in sequence acknowledged packet
-int lastack_in_window;              // at which sequence number corresponds the start of the window
-char real_window_size;              // the current size of the receiving window
-int lastseq;                        // useful variable to know when to stop the receiver : = -1 at the beginning,
+static char packet[PACKET_SIZE];           // a received packet
+static char *header, *payload;             // pointers to the different areas of the packet
+static uint8_t *seq_num;
+static uint16_t *payload_len;
+static uint32_t *crc;
+static struct slot buffer[MAX_WIN_SIZE];   // the receiving buffer containing out of sequence packets
+static int lastack;                        // sequence number of the last in sequence acknowledged packet
+static int lastack_in_window;              // at which sequence number corresponds the start of the window
+static char real_window_size;              // the current size of the receiving window
+static int lastseq;                        // useful variable to know when to stop the receiver : = -1 at the beginning,
                                     // becomes the seqnum of the last packet, stop when lastack = lastseq
 
 int main (int argc, char **argv) {

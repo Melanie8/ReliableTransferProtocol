@@ -14,26 +14,26 @@
 #include "error.h"
 
 // initialized to 0
-bool verbose_flag;
-int delay;
-int fd;
-struct mailbox *network_inbox;
-struct mailbox *timer_inbox;
-struct mailbox *sr_inbox;
+static bool verbose_flag;
+static int delay;
+static int fd;
+static struct mailbox *network_inbox;
+static struct mailbox *timer_inbox;
+static struct mailbox *sr_inbox;
 
-ssize_t len = PAYLOAD_SIZE;
-ssize_t nread;
+static ssize_t len = PAYLOAD_SIZE;
+static ssize_t nread;
 /*
  * The problem is that this is shared with the network simulator agent
  * if we want to read a new packet payload from the file but the old
  * one is still being resent by the network simulator, there is problem
  * Using MAX_SEQ, it is very unlikely. If it happens, the crc will be invalid if we modify it while it is sent or if it finishes, this will be the valid new packet
  */
-struct packet *packets[MAX_SEQ];
-int window_size;
-int window_start;
-int start_in_window;
-int cur_seq;
+static struct packet *sr_packets[MAX_SEQ];
+static int window_size;
+static int window_start;
+static int start_in_window;
+static int cur_seq;
 static long int sr_timeout[MAX_WIN_SIZE];
 
 enum ack_status {
@@ -48,7 +48,7 @@ void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
   m->type = SEND_MESSAGE_TYPE;
   struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
   sm->id = id_in_window;
-  sm->p = packets[seq];
+  sm->p = sr_packets[seq];
   sm->last = last;
   m->data = sm;
   if (verbose_flag)
@@ -62,6 +62,7 @@ void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
   alrm->id = id_in_window * 3 + 2;
   alrm->timeout = get_time_usec() + ((long) delay) * 3;
   sr_timeout[id_in_window] = alrm->timeout;
+  //printf("SR %d->%ld\n", id_in_window, alrm->timeout);
   alrm->inbox = sr_inbox;
   m->data = alrm;
   if (verbose_flag)
@@ -72,7 +73,7 @@ void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
 // FIXME we shouldn't have to add MAX_WIN_SIZE here
 #define INDEX_IN_WINDOW(x) index_in_window(window_start, start_in_window, (x))
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
-#define CUR_PACKET (packets[cur_seq])
+#define CUR_PACKET (sr_packets[cur_seq])
 
 void check_send () {
   while (fd > 0 && between_mod(window_start, (window_start + window_size) % MAX_SEQ, cur_seq)) {
@@ -188,8 +189,8 @@ bool selective_repeat (struct message *m) {
     assert(m->type == STOP_MESSAGE_TYPE);
     int i;
     for (i = 0; i < MAX_SEQ; i++) {
-      if (packets[i] != NULL) {
-        free(packets[i]);
+      if (sr_packets[i] != NULL) {
+        free(sr_packets[i]);
       }
     }
   }

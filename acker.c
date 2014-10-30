@@ -10,10 +10,10 @@
 
 #include "acker.h"
 
-struct mailbox *network_inbox;
-int sfd;
-int ack_id;
-int verbose_flag;
+static struct mailbox *network_inbox;
+static int sfd;
+static int ack_id;
+static int verbose_flag;
 
 void ask_if_cont () {
   struct message *cont = get_stop_message();

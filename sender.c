@@ -17,8 +17,8 @@
 #include "sr.h"
 #include "timer.h"
 
-int delay;
-int sfd;
+static int delay;
+static int sfd;
 
 /* Flag set by ‘--verbose’. */
 static int verbose_flag = 0;
