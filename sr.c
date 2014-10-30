@@ -80,6 +80,7 @@ void check_send () {
       CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     }
     assert(status[CUR_IN_WINDOW] != ack_status_acked);
+    bool last = false;
     if (status[CUR_IN_WINDOW] == ack_status_none) {
       // if window_size has shrinked, it could already have been read
       len = read(fd, CUR_PACKET->payload, len);
@@ -87,7 +88,6 @@ void check_send () {
         myperror("read");
         exit(EXIT_FAILURE); // FIXME do it ??
       }
-      bool last = false;
       if (len != PAYLOAD_SIZE) {
         // end of file
         if (verbose_flag)
