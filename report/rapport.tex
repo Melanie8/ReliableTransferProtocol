@@ -136,13 +136,6 @@
 \subsection{Sender}
 
 We choose to create several agents responsible for different aspects of the sender, each one running in a different thread so that these different aspects can run in parallel. Theses agents communicate with each other via a mailbox system we implemented (we associated with each agent a linked list of messages).
-\begin{itemize}
-\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments (ack). For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an ack for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entries of this buffer at the slots $\equiv 0$ (mod $3$) are used for the delays of transmission of packets, the ones $\equiv 1$ (mod $3$) for the delays of transmissions of the acks and the one $\equiv 2$ (mod $3$) for the retransmission timers.The sequential aspect of these alarms is modeled by a priority queue. This priority queue is implemented with a heap. We can modify and remove elements of the heap in $\mathcal{O}(1)$, not just do \texttt{pop()} and \texttt{push()}. The advantage of our implementation is that number of timeouts doesn't increase too much. If during the lifetime of one alarm let's say $10000000$ packets are sent, the alarms related to the new pending packets will simply overwrite the previous ones. We always have at most $3*31$ current alarms.
-\item \textbf{Acker} This agent is the one who reads the socket. 
-\item \textbf{Network Simulator} This agent is the one who actually send the packets to the receiver via the function \texttt{sendto()}. It keeps a linked lists of everything he has to sent. As soon as he receives a timeout message from the Timer, he looks for the expired packets in this list and sends them.
-\item \textbf{Selective Repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. Let's notice that if the content of the file is a multiple of $512$ bytes then it creates a packet with no data in it to allow the sender to detect the end of the transmission. The Selective Repeat manages everything related to the sending window. It is held aware of the received acknowledgments by the Acker, which transmits the information to Network Simulator (with an id which is just useful for the Timer), which sends it to the Selective Repeat.
-\end{itemize}
-The Figure~\ref{sender} summarizes the interactions between those agents. Network Simulator knows that a packet is the last one when the length entry is $< 512$. When the ack corresponding to the sequence number of this packet is received by the Network Simulator, it says to Acker that it can stop. Then Selective Repeat, Timer and Network simulator also stop.
 
 \begin{figure}[!h]
 	\begin{center}
@@ -152,13 +145,45 @@ The Figure~\ref{sender} summarizes the interactions between those agents. Networ
 	\end{center}
 \end{figure}
 
+\begin{itemize}
+\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments (ack). For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an ack for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entries of this buffer at the slots $\equiv 0$ (mod $3$) are used for the delays of transmission of packets, the ones $\equiv 1$ (mod $3$) for the delays of transmissions of the acks and the one $\equiv 2$ (mod $3$) for the retransmission timers.The sequential aspect of these alarms is modeled by a priority queue. This priority queue is implemented with a heap. We can modify and remove elements of the heap in $\mathcal{O}(1)$, not just do \texttt{pop()} and \texttt{push()}. The advantage of our implementation is that number of timeouts doesn't increase too much. If during the lifetime of one alarm let's say $10000000$ packets are sent, the alarms related to the new pending packets will simply overwrite the previous ones. We always have at most $3*31$ current alarms.
+\item \textbf{Acker} This agent is the one who reads the socket. 
+\item \textbf{Network Simulator} This agent is the one who actually send the packets to the receiver via the function \texttt{sendto()}. It keeps a linked lists of everything he has to sent. As soon as he receives a timeout message from the Timer, he looks for the expired packets in this list and sends them.
+\item \textbf{Selective Repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. Let's notice that if the content of the file is a multiple of $512$ bytes then it creates a packet with no data in it to allow the sender to detect the end of the transmission. The Selective Repeat manages everything related to the sending window. It is held aware of the received acknowledgments by the Acker, which transmits the information to Network Simulator (with an id which is just useful for the Timer), which sends it to the Selective Repeat.
+\end{itemize}
+The Figure~\ref{sender} summarizes the interactions between those agents. Network Simulator knows that a packet is the last one when the length entry is $< 512$. When the ack corresponding to the sequence number of this packet is received by the Network Simulator, it says to Acker that it can stop. Then Selective Repeat, Timer and Network simulator also stop.
+
 \subsubsection{RTT}
 We chose to take a RTT equal to 3 times the delay specified in the arguments of the sender. The RTT must be $> 2*$delay because it is the minimum delay between the transmission and reception of a packet and $3*$delay is the smaller value which is always an integer $>2*$delay. 
 This implies 
 
 \subsubsection{Clean exit in case of errors}
 We took care to properly exit the sender in case of error. In \lstinline|error.c|, we defined that when an error occurs, we print a message according to \lstinline|errno|
-and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set, the rest of the messages are ignored and the thread terminates. In \lstinline|sender.c|, we join each threads, close the file and exits with status \lstinline|EXIT_FAILURE|. We don't use any \texttt{exit()}, everything goes through the return of the main.
+and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set, the rest of the messages are ignored and the thread terminates. In \lstinline|sender.c|, we join each thread, close the file and exit with status \lstinline|EXIT_FAILURE|. We don't use any \texttt{exit()} in the middle of the main function, everything goes through the return.
+
+We checked via valgrind that we had no memory leak.
+\begin{lstlisting}[basicstyle=\ttfamily, basicstyle=\scriptsize]
+[ReliableTransferProtocol] 
+valgrind --leak-check=full ./sender ::1 2141 --file biglorem --splr 300 --sber 300
+==831== Memcheck, a memory error detector
+==831== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==831== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==831== Command: ./sender ::1 2141 --file biglorem --splr 300 --sber 300
+==831== 
+Error receiving a packet
+read: Connection refused
+failed to write, the receiver might have terminate
+write: Connection refused
+==831== 
+==831== HEAP SUMMARY:
+==831==     in use at exit: 0 bytes in 0 blocks
+==831==   total heap usage: 1,216,617 allocs, 1,216,617 frees, 23,901,380 bytes allocated
+==831== 
+==831== All heap blocks were freed -- no leaks are possible
+==831== 
+==831== For counts of detected and suppressed errors, rerun with: -v
+==831== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+\end{lstlisting}
 
 \subsubsection{Consideration of the variable size of the receiving window}
 
@@ -168,7 +193,7 @@ The implementation of the receiver is more straightforward. We implemented a buf
 \begin{figure}[!h]
 	\begin{center}
 		\includegraphics[width=15cm]{images/buffer.eps}
-		\caption{Illustration of the behavior of the buffer when receiving a packet}
+		\caption{Illustration of the behavior of the buffer upon the reception of a packet}
 		\label{buffer}
 	\end{center}
 \end{figure}
@@ -188,7 +213,7 @@ Our implementation suffers from some limitations.
 When the receiver receives the last packet, it sends an ack back but it is possible that this acknowledgment gets lost. One idea is to force the receiver to wait a little bit. That way, the retransmission timer for this packet could expire, the packet could be retransmitted and the receiver would then retransmit one ack. But if the ack is not lost, then the receiver would block because of the \texttt{recvfrom()} operation. So, we just chose to close the receiver just after he sends the last ack. When the sender sees that the receiver is no longer listening, he also stops it's execution.
 
 \subsection{Smart variation of the receiving window size}
-One improvement of our implementation would be to really make the size of the receiving window vary. If the processor related to the receiver is slow, it would receive packets faster than it treats them. It would be better to ask the kernel how many packets the receiver still has the treat and if it sees that it can't follow, then it should then decrease to size of the window. That way, the sender would be informed that the receiver can't follow via the window size specified in the ack packets and it would decrease it's own window size to send less packet at once (without waiting for previous acks). 
+One improvement of our implementation would be to really make the size of the receiving window vary. If the processor related to the receiver is slow, it would receive packets faster than it treats them. It would be better to ask the kernel how many packets the receiver still has to treat and if it sees that it can't follow, then it should decrease to size of the window. That way, the sender would be informed that the receiver can't follow via the window size specified in the ack packets and it would decrease it's own window size to send less packet at once. 
 
 \subsection{Clean termination of the agents}
 Comme limitation, tu peux dire que quand il y a une erreur, tout le monde se termine normalement sauf parfois le acker
