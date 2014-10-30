@@ -79,29 +79,32 @@ void check_send () {
     if (CUR_PACKET == NULL) {
       CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
     }
-    len = read(fd, CUR_PACKET->payload, len);
-    if (len < 0) {
-      myperror("read");
-      exit(EXIT_FAILURE); // FIXME do it ??
+    assert(status[CUR_IN_WINDOW] != ack_status_acked);
+    if (status[CUR_IN_WINDOW] == ack_status_none) {
+      // if window_size has shrinked, it could already have been read
+      len = read(fd, CUR_PACKET->payload, len);
+      if (len < 0) {
+        myperror("read");
+        exit(EXIT_FAILURE); // FIXME do it ??
+      }
+      bool last = false;
+      if (len != PAYLOAD_SIZE) {
+        // end of file
+        if (verbose_flag)
+          printf("SR      end of file\n");
+        close_fd(fd);
+        fd = -1;
+        last = true;
+      }
+
+      memset(CUR_PACKET->payload + len, 0, PAYLOAD_SIZE-len);
+
+      CUR_PACKET->type_and_window_size = (PTYPE_DATA << 5);
+      CUR_PACKET->seq = cur_seq;
+      CUR_PACKET->len = htons(len);
+
+      CUR_PACKET->crc = htonl(crc_packet(CUR_PACKET));
     }
-    bool last = false;
-    if (len != PAYLOAD_SIZE) {
-      // end of file
-      if (verbose_flag)
-        printf("SR      end of file\n");
-      close_fd(fd);
-      fd = -1;
-      last = true;
-    }
-
-    memset(CUR_PACKET->payload + len, 0, PAYLOAD_SIZE-len);
-
-    CUR_PACKET->type_and_window_size = (PTYPE_DATA << 5);
-    CUR_PACKET->seq = cur_seq;
-    CUR_PACKET->len = htons(len);
-
-    //CUR_PACKET->crc = htonl((uint32_t) crc32(0, (const Bytef *)CUR_PACKET, PACKET_SIZE-CRC_SIZE));
-    CUR_PACKET->crc = htonl(crc_packet(CUR_PACKET));
 
     send_mail_to_network_simulator(cur_seq, CUR_IN_WINDOW, last);
 
@@ -166,6 +169,7 @@ bool selective_repeat (struct message *m) {
         if (verbose_flag)
           printf("->%d\n",window_start);
       }
+      window_size = p->type_and_window_size & MAX_WIN_SIZE;
     } else {
       if (verbose_flag)
         printf("SR      invalid ack seq:%d\n", p->seq);

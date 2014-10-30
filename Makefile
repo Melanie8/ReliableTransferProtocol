@@ -8,7 +8,7 @@ OBJ_R = receiver.o common.o error.o
 all: sender receiver
 
 send: sender
-	./sender ::1 2141 --file cin --delay 1000
+	./sender ::1 2141 --file cin --delay 1000 --sber 600
 
 sendbiglorem: sender
 	./sender ::1 2141 --file biglorem --delay 1 --sber 500 --splr 500
