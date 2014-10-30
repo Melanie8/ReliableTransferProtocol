@@ -137,12 +137,12 @@
 
 We choose to create several agents responsible for different aspects of the sender, each one running in a different thread so that these different aspects can run in parallel. Theses agents communicate with each other via a mailbox system we implemented (we associated with each agent a linked list of messages).
 \begin{itemize}
-\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments. For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an acknowledgement for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entries of this buffer at the slots $\equiv 0$ (mod $3$) are used for the delays of transmission of packets, the ones $\equiv 1$ (mod $3$) for the delays of transmissions of the acknowledgements and the one $\equiv 2$ (mod $3$) for the retransmission timers.
+\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments. For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an acknowledgement (ack) for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entries of this buffer at the slots $\equiv 0$ (mod $3$) are used for the delays of transmission of packets, the ones $\equiv 1$ (mod $3$) for the delays of transmissions of the acks and the one $\equiv 2$ (mod $3$) for the retransmission timers.
 \item \textbf{Acker} This agent is the one who reads the socket. 
 \item \textbf{Network Simulator} This agent is the one who actually send the packets to the receiver via the function \texttt{sendto()}. It keeps a linked lists of everything he has to sent. As soon as he receives a timeout message from the Timer, he looks for the expired packets in this list and sends them.
-\item \textbf{Selective repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. So it also manages the sending window. It is held aware of the received acknowledgments by the Acker, which transmits the information to Network Simulator (with an id which is just useful for the Timer), which sends it to the Selective Repeat.
+\item \textbf{Selective Repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. Let's notice that if the content of the file is a multiple of $512$ bytes then it creates a packet with no data in it to allow the sender to detect the end of the transmission. The Selective Repeat manages everything related to the sending window. It is held aware of the received acknowledgments by the Acker, which transmits the information to Network Simulator (with an id which is just useful for the Timer), which sends it to the Selective Repeat.
 \end{itemize}
-The Figure~\ref{sender} summarizes the interactions between those agents. 
+The Figure~\ref{sender} summarizes the interactions between those agents. Network Simulator knows that a packet is the last one when the length entry is $< 512$. When the ack corresponding to the sequence number of this packet is received by the Network Simulator, he says to Acker that he can stop. Then Selective Repeat, Timer and Network simulator also stop.
 
 \begin{figure}[!h]
 	\begin{center}
@@ -152,32 +152,34 @@ The Figure~\ref{sender} summarizes the interactions between those agents.
 	\end{center}
 \end{figure}
 
+\subsubsection{RTT}
+We chose to take a RTT equal to 3 times the delay specified in the arguments of the sender. The RTT must be $> 2*$delay because it is the minimum delay between the transmission and reception of a packet and $3*$delay is the smaller value which is always an integer $>2*$delay.
+
 \subsubsection{Clean exit in case of errors}
-In \lstinline|error.c|, we define that when an error occurs, we print a message according to \lstinline|errno|
-and we set the flag \lstinline|panic| to \lstinline|true|.
+We took care to properly exit the sender in case of error. In \lstinline|error.c|, we defined that when an error occurs, we print a message according to \lstinline|errno|
+and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set, the rest of the messages are ignored and the thread terminates. In \lstinline|sender.c|, we join each threads, close the file and exits with status \lstinline|EXIT_FAILURE|.
 
-In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set,
-the rest of the messages are ignored and the thread terminates.
-
-In \lstinline|sender.c|, we join each threads, close the file and exits with status \lstinline|EXIT_FAILURE|.
+\subsubsection{Consideration of the variable size of the receiving window}
 
 \subsection{Receiver}
-The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an acknowledgement packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but you work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations. 
+The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but you work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations.  We used the same trick for the sending window.
 
-crash : 
+\subsubsection{Good management of lost packet and insertion of errors}
 
 %--------------------------------------------------------------------------
 %	LIMITATIONS
 %--------------------------------------------------------------------------
 \section{Limitations}
-j'attends pas : aucun moyen de savoir
-pas de window dynamique
 
-truc trop cool :
-- multiple de 512 ça marche
-- on gère bien les erreurs 
-- les drops
-- tous nos threads bien réactifs
+Our implementation suffers from some limitations.
+
+\subsection{RTT optimization} The sender could update the RTT with respect to what it measures. If it sees that, on average, it receives an ack $x$ milliseconds after sending it, with $x << RTT$ (resp. $>>$), it could decrease (resp. increase) the value of the RTT. 
+
+\subsection{Last packet}
+When the receiver receives the last packet, it sends an ack back but it is possible that this acknowledgment gets lost. One idea is to force the receiver to wait a little bit. That way, the retransmission timer for this packet could expire, the packet could be retransmitted and the receiver would then retransmit one ack. But if the ack is not lost, then the receiver would block because of the \texttt{recvfrom()} operation. So, we just chose to close the receiver just after he sends the last ack. When the sender sees that the receiver is no longer listening, he also stops it's execution.
+
+\subsection{Smart variation of the receiving window size}
+One improvement of our implementation would be to really make the size of the receiving window vary. If the processor related to the receiver is slow, it would receive packets faster than it treats them. It would be better to ask the kernel how many packets the receiver still has the treat and if it sees that it can't follow, then it should then decrease to size of the window. That way, the sender would be informed that the receiver can't follow via the window size specified in the ack packets and it would decrease it's own window size to send less packet at once (without waiting for previous acks). 
 
 %--------------------------------------------------------------------------
 %	PERFORMANCE

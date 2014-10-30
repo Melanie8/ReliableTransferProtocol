@@ -1,9 +1,7 @@
-- Se mettre d'accord avec tous les define
+
 - utiliser struct packet
 - closer tout ce qui faut : file, socket
 - faire tous les free
 - Gérer erreurs
 - Gérer windows dynamiques
 - gérer le cas où le ack du dernier packet est perdu : receiver doit attendre
-- quid si taille du truc à envoyer c'est pile un multiple de ...
-- s'inscrire sur  http://crp.info.ucl.ac.be/ingi1341/

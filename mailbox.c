@@ -35,7 +35,7 @@ struct mailbox *new_mailbox () {
     myperror("malloc");
     return NULL;
   }
-#ifndef __APPLE__
+#ifndef __MACH__
   inbox->size = (sem_t*) malloc(sizeof(sem_t));
   if (inbox->size == NULL) {
     myperror("malloc");
@@ -50,13 +50,13 @@ struct mailbox *new_mailbox () {
     // Normally pthread_mutex_init always returns 0 but
     // let's be careful
     myperror("pthread_mutex_init");
-#ifndef __APPLE__
+#ifndef __MACH__
     free(inbox->size);
 #endif
     free(inbox);
     return NULL;
   }
-#ifdef __APPLE__
+#ifdef __MACH__
   inbox->size = sem_open("/semaphore", O_CREAT, 0644, 1);
   if (inbox->size == SEM_FAILED) {
     perror("sem_open");
@@ -86,7 +86,7 @@ void delete_mailbox (struct mailbox *inbox) {
     myerror(err, "pthread_mutex_destroy");
     // must continue to destroy and free inbox->size
   }
-#ifdef __APPLE__
+#ifdef __MACH__
   if (sem_close(inbox->size) == -1) {
     perror("sem_close");
   }
