@@ -46,10 +46,17 @@ void send_scheduled_sending () {
     } else {
       // TODO do an agent that send because here we make the ack
       // waits while we are sending..
+      int xor = 0;
+      if ((rand() % 1000) < sber) {
+        xor = 0xff;
+      }
+      first->p->payload[0] ^= xor;
       if (write(sfd, first->p, PACKET_SIZE) != PACKET_SIZE) {
         fprintf(stderr, "partial/failed write\n");
         exit(EXIT_FAILURE);
       }
+      // don't the error for the next time too
+      first->p->payload[0] ^= xor;
     }
     struct network_message *oldfirst = first;
     first = first->next;
@@ -69,7 +76,7 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // to simulate a bit of randomness (the time between SR et this network agent threating it)
   // --> to put in report
   // that way we are also sure that they are put in order in the list
-  
+
   nm->time = get_time_usec() + (long) delay;
   nm->p = sm->p;
   nm->ack = ack;
@@ -122,9 +129,6 @@ bool network (struct message *m) {
         printf("LAST_SEQ : %d\n", last_seq);
     }
     if ((rand() % 1000) >= splr) {
-      if ((rand() % 1000) < sber) {
-        sm->p->payload[0] ^= 0xff;
-      }
       schedule_sending(sm, false);
     } else {
       if (verbose_flag)
