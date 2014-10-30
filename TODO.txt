@@ -1,7 +1,6 @@
-
-- utiliser struct packet
-- closer tout ce qui faut : file, socket
-- faire tous les free
-- Gérer erreurs
-- Gérer windows dynamiques
-- gérer le cas où le ack du dernier packet est perdu : receiver doit attendre
+- utiliser struct packet -> pour l'interopérabilité
+- closer tout ce qui faut : file, socket -> ok normalement
+- faire tous les free -> ok normalement
+- Gérer erreurs -> ok normalement
+- Gérer windows dynamiques -> ok normalement
+- gérer le cas où le ack du dernier packet est perdu : receiver doit attendre -> limitation

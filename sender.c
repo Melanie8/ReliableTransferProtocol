@@ -162,5 +162,11 @@ int main (int argc, char **argv) {
 
   close_fd(fd);
 
+  err = close(sfd);
+  if (err < 0) {
+    myserror("Error while closing the socket");
+    myperror("close");
+  }
+
   exit(panic ? EXIT_FAILURE : EXIT_SUCCESS);
 }
