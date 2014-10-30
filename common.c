@@ -209,7 +209,7 @@ crc_packet(const struct packet *pack)
 	const char *buffer = (const char *)(pack);
 	size_t length = 4 + PAYLOAD_SIZE;
 
-    uLong crc = crc32(0L, Z_NULL, 0);
+    uLong crc = crc32(0x04C11DB7L, Z_NULL, 0);
 
     return crc32(crc, buffer, length);
 }
