@@ -13,6 +13,7 @@
 #include <math.h>
 
 #define PACKET_SIZE 520
+#define LEN_SIZE 2
 #define PAYLOAD_SIZE 512
 #define CRC_SIZE 4
 
