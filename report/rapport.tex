@@ -162,10 +162,15 @@ and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c
 \subsubsection{Consideration of the variable size of the receiving window}
 
 \subsection{Receiver}
-The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but you work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations.  We used the same trick for the sending window.
+The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations.  We used the same trick for the sending window.
 
-\subsubsection{Good management of lost packet and insertion of errors}
-
+\begin{figure}[!h]
+	\begin{center}
+		\includegraphics[width=15cm]{images/buffer.eps}
+		\caption{Illustration of the behavior of the buffer when receiving a packet}
+		\label{sender}
+	\end{center}
+\end{figure}
 %--------------------------------------------------------------------------
 %	LIMITATIONS
 %--------------------------------------------------------------------------
@@ -191,6 +196,9 @@ One improvement of our implementation would be to really make the size of the re
 %--------------------------------------------------------------------------
 \section{Interoperability test }
 
+\subsection{Derval-Gego}
+\subsubsection{Our sender} grande nombre d'envoi du même packet
 
+\subsection{Our receiver} Tout ok, bonne réception de fichier
     
 \end{document}
