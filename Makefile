@@ -14,7 +14,7 @@ sendbiglorem: sender
 	./sender ::1 2141 --file biglorem --delay 10 --sber 500 --splr 500
 
 sendlittlelorem: sender
-	./sender ::1 2141 --file littlelorem --delay 10 --sber 900 --splr 900
+	./sender ::1 2141 --file littlelorem --delay 100 --sber 200 --splr 200
 
 receive: receiver
 	./receiver :: 2141 --file out

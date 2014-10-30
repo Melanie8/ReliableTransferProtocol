@@ -93,7 +93,6 @@ void check_send () {
         // end of file
         if (verbose_flag)
           printf("SR      end of file\n");
-        close_fd(fd);
         fd = -1;
         last = true;
       }
