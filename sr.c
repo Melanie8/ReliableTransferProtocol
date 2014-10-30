@@ -159,7 +159,8 @@ bool selective_repeat (struct message *m) {
     }
     check_send();
   } else if (m->type == ACK_MESSAGE_TYPE) {
-    struct packet *p = (struct packet *) m->data;
+    struct simulator_message *sm = (struct simulator_message *) m->data;
+    struct packet *p = (struct packet *) sm->p;
     if (valid_ack(p)) {
       if (verbose_flag)
         printf("SR      valid ack seq:%d\n", p->seq);
@@ -183,6 +184,7 @@ bool selective_repeat (struct message *m) {
       if (verbose_flag)
         printf("SR      invalid ack seq:%d\n", p->seq);
     }
+    free(p);
     check_send();
   } else if (m->type == TIMEOUT_MESSAGE_TYPE) {
     struct alarm *alrm = m->data;

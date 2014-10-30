@@ -24,10 +24,12 @@ static int sfd;
 static int verbose_flag = 0;
 
 void send_init_message (struct mailbox *inbox, void *init_data) {
-  struct message *m = (struct message *) malloc(sizeof(struct message));
-  m->type = INIT_MESSAGE_TYPE;
-  m->data = init_data;
-  send_mail(inbox, m);
+  struct message *m = get_stop_message();
+  if (m != NULL) {
+    m->type = INIT_MESSAGE_TYPE;
+    m->data = init_data;
+    send_mail(inbox, m);
+  }
 }
 
 int main (int argc, char **argv) {

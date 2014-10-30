@@ -147,7 +147,7 @@ void read_args (int argc, char **argv, char **filename, int *sber, int *splr, in
      and ‘--brief’ as they are encountered,
      we report the final status resulting from them. */
   if (*verbose_flag)
-    fputs("verbose flag is set", stderr);
+    fputs("verbose flag is set\n", stderr);
 
   if (optind >= argc) {
     bad_arg("Missing hostname");

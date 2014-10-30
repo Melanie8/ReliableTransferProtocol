@@ -22,9 +22,9 @@ void *agent (void *data) {
     if (mail != NULL && mail->type == STOP_MESSAGE_TYPE) {
       stop = true;
     } else {
-      if (panic) break;
-      //printf("%p %d\n", mail, block);
-      block = args->handler(mail);
+      // maybe `get_mail' generated some panic
+      if (!panic)
+        block = args->handler(mail);
     }
     if (mail != NULL) {
       if (mail->data != NULL) {
@@ -33,13 +33,13 @@ void *agent (void *data) {
       free(mail);
     }
   }
-  free(args);
 
   struct message *stop_m = get_stop_message();
   if (stop_m != NULL) {
     args->handler(stop_m);
     free(stop_m);
   }
+  free(args);
   return NULL;
 }
 

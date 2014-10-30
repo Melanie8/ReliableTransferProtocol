@@ -9,6 +9,8 @@
 
 #include "mailbox.h"
 #include "error.h"
+// for simulator_message
+#include "network.h"
 
 struct message *get_stop_message() {
   struct message *m = (struct message *) malloc(sizeof(struct message));
@@ -85,6 +87,21 @@ struct mailbox *new_mailbox () {
 }
 
 void delete_mailbox (struct mailbox *inbox) {
+  while (inbox->next != NULL) {
+    struct letter *oldl = inbox->next;
+    inbox->next = oldl->next;
+    if (oldl->m->data != NULL) {
+      if (oldl->m->type == ACK_MESSAGE_TYPE) {
+        // I know it's ugly
+        struct simulator_message *sm = (struct simulator_message *) oldl->m->data;
+        free(sm->p);
+      }
+      free(oldl->m->data);
+    }
+    free(oldl->m);
+    free(oldl);
+  }
+  inbox->last = NULL;
   int err = pthread_mutex_destroy(&inbox->lock);
   if (err != 0) {
     myerror(err, "pthread_mutex_destroy");

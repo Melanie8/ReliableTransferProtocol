@@ -39,11 +39,20 @@ void send_scheduled_sending () {
     if (first->ack) {
       struct message *m = get_stop_message();
       if (m != NULL) {
-        m->type = ACK_MESSAGE_TYPE;
-        m->data = first->p;
-        if (verbose_flag)
-          printf("network send     %d to SR\n", m->type);
-        send_mail(sr_inbox, m);
+        struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
+        if (sm == NULL) {
+          free(m);
+          myperror("malloc");
+        } else {
+          sm->id = 0; // unused
+          sm->last = false; // unused
+          sm->p = first->p;
+          m->type = ACK_MESSAGE_TYPE;
+          m->data = sm;
+          if (verbose_flag)
+            printf("network send     %d to SR\n", m->type);
+          send_mail(sr_inbox, m);
+        }
       }
     } else {
       // TODO do an agent that send because here we make the ack
@@ -184,6 +193,8 @@ bool network (struct message *m) {
     last = NULL;
     // SR can free the packets now
     send_mail(sr_inbox, get_stop_message());
+    // in case of failure
+    send_mail(acker_inbox, get_stop_message());
   }
   return true;
 }

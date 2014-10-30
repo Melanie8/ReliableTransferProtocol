@@ -20,7 +20,7 @@ void ask_if_cont () {
   if (cont) {
     cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
     if (verbose_flag)
-      printf("acker   sends %d to network\n", cont->type);
+      printf("acker   sends    %d to network\n", cont->type);
     send_mail(network_inbox, cont);
   }
 }
@@ -56,11 +56,11 @@ bool acker (struct message *m) {
             sm->p = p;
             sm->id = ack_id;
             ack_id = (ack_id + 1) % MAX_WIN_SIZE;
-            sm->last = false; // nonsense here
+            sm->last = false; // unused
             ack_m->type = ACK_MESSAGE_TYPE;
             ack_m->data = sm;
             if (verbose_flag)
-              printf("acker   sends %d to network\n", m->type);
+              printf("acker   sends    %d to network\n", ack_m->type);
             send_mail(network_inbox, ack_m);
             ask_if_cont();
           }
