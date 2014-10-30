@@ -216,8 +216,8 @@ crc_packet(const struct packet *pack)
 
 bool valid_ack(struct packet *p) {
   uint32_t expected_crc = crc_packet(p);
-  // FIXME check len is 0 ??
   return (expected_crc == ntohl(p->crc) &&
+      p->len == 0 &&
       (p->type_and_window_size >> WINDOW_SIZE) == PTYPE_ACK);
 }
 

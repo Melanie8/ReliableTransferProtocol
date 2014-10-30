@@ -12,6 +12,10 @@
 
 struct message *get_stop_message() {
   struct message *m = (struct message *) malloc(sizeof(struct message));
+  if (m == NULL) {
+    myperror("malloc");
+    return NULL;
+  }
   m->type = STOP_MESSAGE_TYPE;
   m->data = NULL;
   return m;

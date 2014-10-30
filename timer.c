@@ -12,8 +12,11 @@ static bool verbose_flag;
 
 long get_time_usec () {
   struct timeval now;
-  gettimeofday(&now, NULL);
-  // TODO error
+  int err = gettimeofday(&now, NULL);
+  if (err != 0) {
+    myperror("gettimeofday");
+    return 0;
+  }
   return ((long) now.tv_sec) * MILLION + now.tv_usec;
 }
 
@@ -86,16 +89,23 @@ struct mailbox *inbox[N_TIMER];
 void check_timers () {
   while (n > 0 && timer_timeout[top_heap()] <= get_time_usec()) {
     int id = poll_heap();
-    struct message *m = (struct message *) malloc(sizeof(struct message));
+    struct message *m = get_stop_message();
     m->type = TIMEOUT_MESSAGE_TYPE;
-    struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
-    alrm->id = id;
-    alrm->timeout = timer_timeout[id];
-    alrm->inbox = NULL;
-    m->data = alrm;
-    send_mail(inbox[id], m);
-    timer_timeout[id] = 0;
-    inbox[id] = NULL;
+    if (m != NULL) {
+      struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
+      if (alrm == NULL) {
+        free(m);
+        myperror("malloc");
+      } else {
+        alrm->id = id;
+        alrm->timeout = timer_timeout[id];
+        alrm->inbox = NULL;
+        m->data = alrm;
+        send_mail(inbox[id], m);
+        timer_timeout[id] = 0;
+        inbox[id] = NULL;
+      }
+    }
   }
 }
 
@@ -129,8 +139,11 @@ bool timer (struct message *m) {
       time_to_sleep = MIN(time_to_sleep, timer_timeout[top_heap()]);
     }
     int err = usleep(time_to_sleep);
-    // TODO errors
-    check_timers();
+    if (err != 0) {
+      myperror("usleep");
+    } else {
+      check_timers();
+    }
   }
   return n == 0;
 }

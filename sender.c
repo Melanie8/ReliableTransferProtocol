@@ -135,27 +135,27 @@ int main (int argc, char **argv) {
           send_init_message(acker_inbox, acker_i);
         }
 
-        pthread_join(sr_thread, NULL);
-        if (verbose_flag)
-          printf("sr joined\n");
         pthread_join(network_thread, NULL);
         if (verbose_flag)
           printf("network joined\n");
-        pthread_join(acker_thread, NULL);
-        if (verbose_flag)
-          printf("acker joined\n");
         pthread_join(timer_thread, NULL);
         if (verbose_flag)
           printf("timer joined\n");
+        pthread_join(sr_thread, NULL);
+        if (verbose_flag)
+          printf("sr joined\n");
+        pthread_join(acker_thread, NULL);
+        if (verbose_flag)
+          printf("acker joined\n");
 
-        if (acker_inbox != NULL)
-          delete_mailbox(acker_inbox);
         if (network_inbox != NULL)
           delete_mailbox(network_inbox);
         if (timer_inbox != NULL)
           delete_mailbox(timer_inbox);
         if (sr_inbox != NULL)
           delete_mailbox(sr_inbox);
+        if (acker_inbox != NULL)
+          delete_mailbox(acker_inbox);
       }
     }
   }

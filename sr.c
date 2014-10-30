@@ -45,33 +45,46 @@ enum ack_status {
 enum ack_status status[MAX_WIN_SIZE];
 
 void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
-  struct message *m = (struct message*) malloc(sizeof(struct message));
-  m->type = SEND_MESSAGE_TYPE;
-  struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
-  sm->id = id_in_window;
-  sm->p = sr_packets[seq];
-  sm->last = last;
-  m->data = sm;
-  if (verbose_flag)
-    printf("SR      sends    %d to network\n", m->type);
-  send_mail(network_inbox, m);
+  struct message *m = get_stop_message();
+  if (m != NULL) {
+    m->type = SEND_MESSAGE_TYPE;
+    struct simulator_message *sm = (struct simulator_message*) malloc(sizeof(struct simulator_message));
+    if (sm == NULL) {
+      free(m);
+      myperror("malloc");
+    } else {
+      sm->id = id_in_window;
+      sm->p = sr_packets[seq];
+      sm->last = last;
+      m->data = sm;
+      if (verbose_flag)
+        printf("SR      sends    %d to network\n", m->type);
+      send_mail(network_inbox, m);
+    }
+  }
+  // show that it has been read
   status[id_in_window] = ack_status_sent;
 
-  m = (struct message*) malloc(sizeof(struct message));
-  m->type = ALARM_MESSAGE_TYPE;
-  struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
-  alrm->id = id_in_window * 3 + 2;
-  alrm->timeout = get_time_usec() + ((long) delay) * 3;
-  sr_timeout[id_in_window] = alrm->timeout;
-  //printf("SR %d->%ld\n", id_in_window, alrm->timeout);
-  alrm->inbox = sr_inbox;
-  m->data = alrm;
-  if (verbose_flag)
-    printf("SR      sends    %d to timer\n", m->type);
-  send_mail(timer_inbox, m);
+  m = get_stop_message();
+  if (m != NULL) {
+    m->type = ALARM_MESSAGE_TYPE;
+    struct alarm *alrm = (struct alarm*) malloc(sizeof(struct alarm));
+    if (alrm == NULL) {
+      free(m);
+      myperror("malloc");
+    } else {
+      alrm->id = id_in_window * 3 + 2;
+      alrm->timeout = get_time_usec() + ((long) delay) * 3;
+      sr_timeout[id_in_window] = alrm->timeout;
+      alrm->inbox = sr_inbox;
+      m->data = alrm;
+      if (verbose_flag)
+        printf("SR      sends    %d to timer\n", m->type);
+      send_mail(timer_inbox, m);
+    }
+  }
 }
 
-// FIXME we shouldn't have to add MAX_WIN_SIZE here
 #define INDEX_IN_WINDOW(x) index_in_window(window_start, start_in_window, (x))
 #define CUR_IN_WINDOW INDEX_IN_WINDOW(cur_seq)
 #define CUR_PACKET (sr_packets[cur_seq])
@@ -80,6 +93,10 @@ void check_send () {
   while (fd > 0 && between_mod(window_start, (window_start + window_size) % MAX_SEQ, cur_seq)) {
     if (CUR_PACKET == NULL) {
       CUR_PACKET = (struct packet *) malloc(sizeof(struct packet));
+      if (CUR_PACKET == NULL) {
+        myperror("malloc");
+        return;
+      }
     }
     assert(status[CUR_IN_WINDOW] != ack_status_acked);
     bool last = false;
@@ -88,7 +105,7 @@ void check_send () {
       len = read(fd, CUR_PACKET->payload, len);
       if (len < 0) {
         myperror("read");
-        exit(EXIT_FAILURE); // FIXME do it ??
+        return;
       }
       if (len != PAYLOAD_SIZE) {
         // end of file

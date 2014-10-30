@@ -37,12 +37,14 @@ void send_scheduled_sending () {
   long t = get_time_usec();
   while (first != NULL && first->time <= t) {
     if (first->ack) {
-      struct message *m = (struct message*) malloc(sizeof(struct message));
-      m->type = ACK_MESSAGE_TYPE;
-      m->data = first->p;
-      if (verbose_flag)
-        printf("network send     %d to SR\n", m->type);
-      send_mail(sr_inbox, m);
+      struct message *m = get_stop_message();
+      if (m != NULL) {
+        m->type = ACK_MESSAGE_TYPE;
+        m->data = first->p;
+        if (verbose_flag)
+          printf("network send     %d to SR\n", m->type);
+        send_mail(sr_inbox, m);
+      }
     } else {
       // TODO do an agent that send because here we make the ack
       // waits while we are sending..
@@ -52,8 +54,8 @@ void send_scheduled_sending () {
       }
       first->p->payload[0] ^= xor;
       if (write(sfd, first->p, PACKET_SIZE) != PACKET_SIZE) {
-        fprintf(stderr, "partial/failed write\n");
-        exit(EXIT_FAILURE);
+        myserror("failed to write, the receiver might have terminate");
+        myperror("write");
       }
       // don't the error for the next time too
       first->p->payload[0] ^= xor;
@@ -72,35 +74,50 @@ void schedule_sending (struct simulator_message *sm, bool ack) {
   // to avoid having the problem with 2 schedule with the same id
 
   struct network_message *nm = (struct network_message *) malloc(sizeof(struct network_message));
-  // We only start time here (and not when SelectiveRepeat send it)
-  // to simulate a bit of randomness (the time between SR et this network agent threating it)
-  // --> to put in report
-  // that way we are also sure that they are put in order in the list
 
-  nm->time = get_time_usec() + (long) delay;
-  nm->p = sm->p;
-  nm->ack = ack;
-  nm->next = NULL;
-  if (last == NULL) {
-    assert(first == NULL);
-    first = nm;
+  if (nm == NULL) {
+    myperror("malloc");
   } else {
-    assert(first != NULL);
-    last->next = nm;
+    // We only start time here (and not when SelectiveRepeat send it)
+    // to simulate a bit of randomness (the time between SR et this network agent threating it)
+    // --> to put in report
+    // that way we are also sure that they are put in order in the list
+
+    nm->time = get_time_usec() + (long) delay;
+    nm->p = sm->p;
+    nm->ack = ack;
+    nm->next = NULL;
+    if (last == NULL) {
+      assert(first == NULL);
+      first = nm;
+    } else {
+      assert(first != NULL);
+      last->next = nm;
+    }
+    last = nm;
+    struct message *m = get_stop_message();
+    if (m != NULL) {
+      m->type = ALARM_MESSAGE_TYPE;
+      struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
+      if (alrm == NULL) {
+        free(nm);
+        free(m);
+        myperror("malloc");
+      } else {
+        // we multiply by 3 distinguish ids for timeout, acks and normal packets
+        // if we previously used this id for the timer, this timer has necessarily already expired
+        alrm->id = sm->id * 3 + ack;
+        alrm->timeout = nm->time;
+        alrm->inbox = network_inbox;
+        m->data = alrm;
+        if (verbose_flag)
+          printf("network send     %d to timer\n", m->type);
+        send_mail(timer_inbox, m);
+      }
+    } else {
+      free(nm);
+    }
   }
-  last = nm;
-  struct message *m = (struct message *) malloc(sizeof(struct message));
-  m->type = ALARM_MESSAGE_TYPE;
-  struct alarm *alrm = (struct alarm *) malloc(sizeof(struct alarm));
-  // we multiply by 3 distinguish ids for timeout, acks and normal packets
-  // if we previously used this id for the timer, this timer has necessarily already expired
-  alrm->id = sm->id * 3 + ack;
-  alrm->timeout = nm->time;
-  alrm->inbox = network_inbox;
-  m->data = alrm;
-  if (verbose_flag)
-    printf("network send     %d to timer\n", m->type);
-  send_mail(timer_inbox, m);
 }
 
 
@@ -141,16 +158,17 @@ bool network (struct message *m) {
       continue_acking = false;
     }
   } else if (m->type == CONTINUE_ACKING_MESSAGE_TYPE) {
-    struct message *cont = (struct message *) malloc(sizeof(struct message));
-    if (continue_acking) {
-      cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
-    } else {
-      cont->type = STOP_MESSAGE_TYPE;
+    struct message *cont = get_stop_message();
+    if (cont != NULL) {
+      if (continue_acking) {
+        cont->type = CONTINUE_ACKING_MESSAGE_TYPE;
+      } else {
+        cont->type = STOP_MESSAGE_TYPE;
+      }
+      if (verbose_flag)
+        printf("network sends    %d to acker\n", m->type);
+      send_mail(acker_inbox, cont);
     }
-    cont->data = NULL;
-    if (verbose_flag)
-      printf("network sends    %d to acker\n", m->type);
-    send_mail(acker_inbox, cont);
   } else if (m->type == TIMEOUT_MESSAGE_TYPE) {
     send_scheduled_sending();
   } else {
