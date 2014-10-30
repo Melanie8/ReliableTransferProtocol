@@ -6,3 +6,4 @@
 - Gérer windows dynamiques
 - gérer le cas où le ack du dernier packet est perdu : receiver doit attendre
 - quid si taille du truc à envoyer c'est pile un multiple de ...
+- s'inscrire sur  http://crp.info.ucl.ac.be/ingi1341/

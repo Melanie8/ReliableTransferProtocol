@@ -137,7 +137,7 @@
 
 We choose to create several agents responsible for different aspects of the sender, each one running in a different thread so that these different aspects can run in parallel. Theses agents communicate with each other via a mailbox system we implemented (we associated with each agent a linked list of messages).
 \begin{itemize}
-\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments. For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an acknowledgement for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entry $3id$ is for the delay for the packet corresponding to the slot $id$ in the buffer, the entry $3id+1$ is for the delay for the ack and the entry $3id+2$ is for the retransmission timer for this packet.
+\item \textbf{Timer} This agent is responsible for everything related to the time. When another agent wants to launch an alarm that will expire at a certain time $t$, it delegates the work to Timer : it sends a message to Timer and the Timer will take care to prevent it once the alarm expired. This agent is useful both to implement the retransmission timer and to simulate the delays to send data and receive acknowledgments. For each $id$ in the sending buffer, there could be three alarms : one to simulate the delay to send the corresponding packet, another to simulate the delay to receive an acknowledgement for this packet and another to know when to retransmit the packet if no acknowledgment is received. Therefore, Timer uses an array of alarms whose size is equal to 3 times the maximum size of the sending buffer. The entries of this buffer at the slots $\equiv 0$ (mod $3$) are used for the delays of transmission of packets, the ones $\equiv 1$ (mod $3$) for the delays of transmissions of the acknowledgements and the one $\equiv 2$ (mod $3$) for the retransmission timers.
 \item \textbf{Acker} This agent is the one who reads the socket. 
 \item \textbf{Network Simulator} This agent is the one who actually send the packets to the receiver via the function \texttt{sendto()}. It keeps a linked lists of everything he has to sent. As soon as he receives a timeout message from the Timer, he looks for the expired packets in this list and sends them.
 \item \textbf{Selective repeat}  This agent is responsible to read the file and create packets that the Network Simulator will send. So it also manages the sending window. It is held aware of the received acknowledgments by the Acker, which transmits the information to Network Simulator (with an id which is just useful for the Timer), which sends it to the Selective Repeat.
@@ -164,10 +164,20 @@ In \lstinline|sender.c|, we join each threads, close the file and exits with sta
 \subsection{Receiver}
 The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an acknowledgement packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but you work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations. 
 
+crash : 
+
 %--------------------------------------------------------------------------
 %	LIMITATIONS
 %--------------------------------------------------------------------------
 \section{Limitations}
+j'attends pas : aucun moyen de savoir
+pas de window dynamique
+
+truc trop cool :
+- multiple de 512 ça marche
+- on gère bien les erreurs 
+- les drops
+- tous nos threads bien réactifs
 
 %--------------------------------------------------------------------------
 %	PERFORMANCE
@@ -178,6 +188,7 @@ The implementation of the receiver is more straightforward. We implemented a buf
 %	INTEROPERABILITY TEST
 %--------------------------------------------------------------------------
 \section{Interoperability test }
+
 
     
 \end{document}
