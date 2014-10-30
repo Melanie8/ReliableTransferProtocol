@@ -147,6 +147,15 @@ int main (int argc, char **argv) {
         pthread_join(timer_thread, NULL);
         if (verbose_flag)
           printf("timer joined\n");
+
+        if (acker_inbox != NULL)
+          delete_mailbox(acker_inbox);
+        if (network_inbox != NULL)
+          delete_mailbox(network_inbox);
+        if (timer_inbox != NULL)
+          delete_mailbox(timer_inbox);
+        if (sr_inbox != NULL)
+          delete_mailbox(sr_inbox);
       }
     }
   }

@@ -164,6 +164,8 @@ bool network (struct message *m) {
       free(oldfirst);
     }
     last = NULL;
+    // SR can free the packets now
+    send_mail(sr_inbox, get_stop_message());
   }
   return true;
 }

@@ -35,6 +35,7 @@ static int window_start;
 static int start_in_window;
 static int cur_seq;
 static long int sr_timeout[MAX_WIN_SIZE];
+static bool sr_stop;
 
 enum ack_status {
   ack_status_none=0,
@@ -111,32 +112,23 @@ void check_send () {
     cur_seq = (cur_seq + 1) % MAX_SEQ;
   }
   if (fd < 0 && status[start_in_window] == ack_status_none) {
-    struct message *m_network = (struct message *) malloc(sizeof(struct message));
-    struct message *m_timer = (struct message *) malloc(sizeof(struct message));
-    struct message *m_self = (struct message *) malloc(sizeof(struct message));
-    m_network->type = STOP_MESSAGE_TYPE;
-    m_network->data = NULL;
-    m_timer->type = STOP_MESSAGE_TYPE;
-    m_timer->data = NULL;
-    m_self->type = STOP_MESSAGE_TYPE;
-    m_self->data = NULL;
+    sr_stop = true;
     if (verbose_flag)
-      printf("SR    sends     %d to network\n", m_network->type);
-    send_mail(network_inbox, m_network);
+      printf("SR    sends     %d to network\n", STOP_MESSAGE_TYPE);
+    send_mail(network_inbox, get_stop_message());
     if (verbose_flag)
-      printf("SR    sends     %d to timer\n", m_timer->type);
-    send_mail(timer_inbox, m_timer);
-    if (verbose_flag)
-      printf("SR    sends     %d to sr\n", m_self->type);
-    send_mail(sr_inbox, m_self);
+      printf("SR    sends     %d to timer\n", STOP_MESSAGE_TYPE);
+    send_mail(timer_inbox, get_stop_message());
   }
 }
 
 bool selective_repeat (struct message *m) {
   if (verbose_flag)
     printf("SR      receives %d\n", m->type);
+  if (sr_stop && m->type != STOP_MESSAGE_TYPE) return true;
   if (m->type == INIT_MESSAGE_TYPE) {
     struct sr_init *init = (struct sr_init *) m->data;
+    sr_stop = false;
     verbose_flag = init->verbose_flag;
     fd = init->fd;
     delay = init->delay;

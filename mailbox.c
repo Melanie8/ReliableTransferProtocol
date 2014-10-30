@@ -150,11 +150,11 @@ struct message *get_mail (struct mailbox *inbox, bool block) {
 
 // return an int ??
 void send_mail (struct mailbox *inbox, struct message *m) {
+  if (m == NULL) return;
   // On se prépare un max avant de locker
   struct letter *new_l = (struct letter *) malloc(sizeof(struct letter));
   if (new_l == NULL) {
     myperror("malloc");
-    //return 1;
     return;
   }
   new_l->m = m;
