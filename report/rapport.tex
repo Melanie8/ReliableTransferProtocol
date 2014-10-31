@@ -247,9 +247,10 @@ BON EN FAIT C'EST PAS SUPER UTILE CE QUE JE DIS, C'EST PEUT-ÊTRE PLUS INTERESSA
 %--------------------------------------------------------------------------
 \section{Interoperability test }
 
-We tested the compatibility between our programs with the ones of two other groups (Derval-Gego and Houssiaux-Istasse) using Wireshark. Let's notice that Wireshark displays acks when they are sent and not when they are not processed by the sender. So it is normal that some data packets appear after their corresponding acknowledgement.
+We tested the compatibility between our programs with the ones of two other groups (Derval-Gego and Jadin-Tihon) using Wireshark. Let's notice that Wireshark displays acks when they are sent and not when they are not processed by the sender. So it is normal that some data packets appear after their corresponding acknowledgement.
 
 The only bug we detected and that we could not detect internally is that we used \texttt{crc32()} with a first argument of $0$ instead of "0x04C11DB7" which represent the divisor polynomial $x^{32} +x^{26} +x^{23} +x^{22} +x^{16} +x^{12} +x^{11} +x^{10} +x^{8} + x^{7} + x^{5} + x^{4} + x^{2} + x + 1$. All packets were therefore identified as invalid.
  
+LE TRUC DE ISTASSE MARCHAIT PAS DONC JE TESTE AVEC JADIN-TIHON
 
 \end{document}
