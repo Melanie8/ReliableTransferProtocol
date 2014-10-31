@@ -29,4 +29,4 @@ receiver: $(OBJ_R)
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:
-	$(RM) sender receiver *.o
+	$(RM) sender receiver src/*.o

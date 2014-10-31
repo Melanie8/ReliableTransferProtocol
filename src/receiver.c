@@ -118,7 +118,7 @@ int main (int argc, char **argv) {
   peer_addr_len = sizeof(struct sockaddr_storage);
 
   /* Until we reach the end of the transmission */
-  while (!panic && lastseq != lastack) {
+  while (fd != -1 && !panic && lastseq != lastack) {
 
     if (verbose_flag) {
       printf("LASTSEQ %d LASTACK %d\n", lastseq, lastack);

@@ -87,77 +87,79 @@ int main (int argc, char **argv) {
     } else {
       fd = get_fd(filename, false);
 
-      pthread_t sr_thread, timer_thread, network_thread, acker_thread;
-      struct mailbox *sr_inbox = make_agent(&sr_thread, selective_repeat);
-      struct mailbox *network_inbox = make_agent(&network_thread, network);
-      struct mailbox *timer_inbox = make_agent(&timer_thread, timer);
-      struct mailbox *acker_inbox = make_agent(&acker_thread, acker);
+      if (fd != -1) {
+        pthread_t sr_thread, timer_thread, network_thread, acker_thread;
+        struct mailbox *sr_inbox = make_agent(&sr_thread, selective_repeat);
+        struct mailbox *network_inbox = make_agent(&network_thread, network);
+        struct mailbox *timer_inbox = make_agent(&timer_thread, timer);
+        struct mailbox *acker_inbox = make_agent(&acker_thread, acker);
 
-      if (sr_inbox != NULL && network_inbox != NULL && timer_inbox != NULL && acker_inbox != NULL) {
-        struct sr_init *sr_i = (struct sr_init *) malloc(sizeof(struct sr_init));
-        if (sr_i == NULL)
-          myperror("malloc");
-        struct network_init *network_i = (struct network_init *) malloc(sizeof(struct network_init));
-        if (network_i == NULL)
-          myperror("malloc");
-        struct timer_init *timer_i = (struct timer_init *) malloc(sizeof(struct timer_init));
-        if (timer_i == NULL)
-          myperror("malloc");
-        struct acker_init *acker_i = (struct acker_init *) malloc(sizeof(struct acker_init));
-        if (acker_i == NULL)
-          myperror("malloc");
-        if (sr_i != NULL && network_i != NULL && timer_i != NULL && acker_i != NULL) {
-          network_i->sber = sber;
-          network_i->splr = splr;
-          network_i->sfd = sfd;
-          network_i->delay = delay;
-          network_i->acker_inbox = acker_inbox;
-          network_i->sr_inbox = sr_inbox;
-          network_i->timer_inbox = timer_inbox;
-          network_i->network_inbox = network_inbox;
-          network_i->verbose_flag = verbose_flag;
-          timer_i->delay = delay;
-          timer_i->verbose_flag = verbose_flag;
-          sr_i->fd = fd;
-          sr_i->delay = delay;
-          sr_i->network_inbox = network_inbox;
-          sr_i->timer_inbox = timer_inbox;
-          sr_i->sr_inbox = sr_inbox;
-          sr_i->verbose_flag = verbose_flag;
-          acker_i->sfd = sfd;
-          acker_i->network_inbox = network_inbox;
-          acker_i->verbose_flag = verbose_flag;
-          // the order is important so that INIT is
-          // the first message sent
-          // sr with start everything so call it last
-          send_init_message(timer_inbox, timer_i);
-          send_init_message(network_inbox, network_i);
-          send_init_message(sr_inbox, sr_i);
-          // nobody sends it message before he asks
-          send_init_message(acker_inbox, acker_i);
+        if (sr_inbox != NULL && network_inbox != NULL && timer_inbox != NULL && acker_inbox != NULL) {
+          struct sr_init *sr_i = (struct sr_init *) malloc(sizeof(struct sr_init));
+          if (sr_i == NULL)
+            myperror("malloc");
+          struct network_init *network_i = (struct network_init *) malloc(sizeof(struct network_init));
+          if (network_i == NULL)
+            myperror("malloc");
+          struct timer_init *timer_i = (struct timer_init *) malloc(sizeof(struct timer_init));
+          if (timer_i == NULL)
+            myperror("malloc");
+          struct acker_init *acker_i = (struct acker_init *) malloc(sizeof(struct acker_init));
+          if (acker_i == NULL)
+            myperror("malloc");
+          if (sr_i != NULL && network_i != NULL && timer_i != NULL && acker_i != NULL) {
+            network_i->sber = sber;
+            network_i->splr = splr;
+            network_i->sfd = sfd;
+            network_i->delay = delay;
+            network_i->acker_inbox = acker_inbox;
+            network_i->sr_inbox = sr_inbox;
+            network_i->timer_inbox = timer_inbox;
+            network_i->network_inbox = network_inbox;
+            network_i->verbose_flag = verbose_flag;
+            timer_i->delay = delay;
+            timer_i->verbose_flag = verbose_flag;
+            sr_i->fd = fd;
+            sr_i->delay = delay;
+            sr_i->network_inbox = network_inbox;
+            sr_i->timer_inbox = timer_inbox;
+            sr_i->sr_inbox = sr_inbox;
+            sr_i->verbose_flag = verbose_flag;
+            acker_i->sfd = sfd;
+            acker_i->network_inbox = network_inbox;
+            acker_i->verbose_flag = verbose_flag;
+            // the order is important so that INIT is
+            // the first message sent
+            // sr with start everything so call it last
+            send_init_message(timer_inbox, timer_i);
+            send_init_message(network_inbox, network_i);
+            send_init_message(sr_inbox, sr_i);
+            // nobody sends it message before he asks
+            send_init_message(acker_inbox, acker_i);
+          }
+
+          pthread_join(network_thread, NULL);
+          if (verbose_flag)
+            printf("network joined\n");
+          pthread_join(timer_thread, NULL);
+          if (verbose_flag)
+            printf("timer joined\n");
+          pthread_join(sr_thread, NULL);
+          if (verbose_flag)
+            printf("sr joined\n");
+          pthread_join(acker_thread, NULL);
+          if (verbose_flag)
+            printf("acker joined\n");
+
+          if (network_inbox != NULL)
+            delete_mailbox(network_inbox);
+          if (timer_inbox != NULL)
+            delete_mailbox(timer_inbox);
+          if (sr_inbox != NULL)
+            delete_mailbox(sr_inbox);
+          if (acker_inbox != NULL)
+            delete_mailbox(acker_inbox);
         }
-
-        pthread_join(network_thread, NULL);
-        if (verbose_flag)
-          printf("network joined\n");
-        pthread_join(timer_thread, NULL);
-        if (verbose_flag)
-          printf("timer joined\n");
-        pthread_join(sr_thread, NULL);
-        if (verbose_flag)
-          printf("sr joined\n");
-        pthread_join(acker_thread, NULL);
-        if (verbose_flag)
-          printf("acker joined\n");
-
-        if (network_inbox != NULL)
-          delete_mailbox(network_inbox);
-        if (timer_inbox != NULL)
-          delete_mailbox(timer_inbox);
-        if (sr_inbox != NULL)
-          delete_mailbox(sr_inbox);
-        if (acker_inbox != NULL)
-          delete_mailbox(acker_inbox);
       }
     }
   }
