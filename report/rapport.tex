@@ -154,8 +154,7 @@ We choose to create several agents responsible for different aspects of the send
 The Figure~\ref{sender} summarizes the interactions between those agents. Network Simulator knows that a packet is the last one when the length entry is $< 512$. When the ack corresponding to the sequence number of this packet is received by the Network Simulator, it says to Acker that it can stop. Then Selective Repeat, Timer and Network simulator also stop.
 
 \subsubsection{RTT}
-We chose to take a RTT equal to 3 times the delay specified in the arguments of the sender. The RTT must be $> 2*$delay because it is the minimum delay between the transmission and reception of a packet and $3*$delay is the smaller value which is always an integer $>2*$delay. 
-This implies 
+We chose to take a RTT equal to 3 times the delay specified in the arguments of the sender. The RTT must be $> 2*$delay because it is the minimum delay between the transmission and reception of a packet and $3*$delay is the smaller value which is always an integer $>2*$delay. We still defined a minimum RTT value of $\unit{1024}{\micro\second}$ because even if a delay of $0$ is specified, in practice there is always a delay and then our sender sent many, many times each packet. 
 
 \subsubsection{Clean exit in case of errors}
 We took care to properly exit the sender in case of error. In \lstinline|error.c|, we defined that when an error occurs, we print a message according to \lstinline|errno|
@@ -185,7 +184,9 @@ write: Connection refused
 ==831== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 \end{lstlisting}
 
-\subsubsection{Consideration of the variable size of the receiving window}
+To be totally rigorous, when an error occurs, each agent ends normally expect sometimes the Acker if it is busy receiving. The other agents actually don't know if they have to kill him or if it is stopping. It would be possible to "cancel" this thread using \texttt{pthread\_cancel()}. However, this isn't typically best practice and we preferred to create a system where everything is well cancelled.
+
+\subsubsection{\textcolor{red}{Consideration of the variable size of the receiving window}}
 
 \subsection{Receiver}
 The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations (see Figure~\ref{buffer}).  We used the same trick for the sending window.\\
@@ -215,28 +216,40 @@ When the receiver receives the last packet, it sends an ack back but it is possi
 \subsection{Smart variation of the receiving window size}
 One improvement of our implementation would be to really make the size of the receiving window vary. If the processor related to the receiver is slow, it would receive packets faster than it treats them. It would be better to ask the kernel how many packets the receiver still has to treat and if it sees that it can't follow, then it should decrease to size of the window. That way, the sender would be informed that the receiver can't follow via the window size specified in the ack packets and it would decrease it's own window size to send less packet at once. 
 
-\subsection{Clean termination of the agents}
-Comme limitation, tu peux dire que quand il y a une erreur, tout le monde se termine normalement sauf parfois le acker
-Comme il est busy receiving
-Pour fix on pourrait faire un timeout pour le receiving
-
 %--------------------------------------------------------------------------
 %	PERFORMANCE
 %--------------------------------------------------------------------------
 \section{Factors limiting the performance}
+
+We analyzed the influence of the argument delay when the other arguments are equal to zero. Let's recall that we took RTT $=$ max($3*$delay, $\unit{1024}{\micro\second}$).  The bigger delay is, the less packets will be sent through the network since the RTT will be bigger. At some point, the number of packets becomes logically stable because no packet be will retransmitted unnecessarily. The elapsed time between the first packet and the last packet sent through the network is a function that start the decrease and then increase. It also seems logical. If the RTT is too small, then we will waste time processing some packets that are retransmitted to early. If we wait a little more, we can avoid some retransmissions and gain time. But if the RTT is too big, then the overhead increases. We wait too much, we should ask a retransmission earlier.
+
+\begin{figure}[!h]
+        \centering
+        \begin{subfigure}[b]{0.49\textwidth}
+		\centering \includegraphics[width=\textwidth]{images/npackets.eps}
+		\caption{Number of packets}
+		\label{FluxSquareSum}
+	\end{subfigure}
+        \begin{subfigure}[b]{0.49\textwidth}
+        		\centering\includegraphics[width=\textwidth]{images/time.eps}
+		\caption{Elapsed time}
+		\label{analyse}
+	\end{subfigure}
+	\caption{Analyse of the influence of the argument delay}
+	\label{deltafluxvar}
+\end{figure}
+
+BON EN FAIT C'EST PAS SUPER UTILE CE QUE JE DIS, C'EST PEUT-ÊTRE PLUS INTERESSANT D'ANALYSER, POUR UN DELAY FIXE, L'INFLUENCE DU RTT
+\textcolor{red}{parler de l'influence des autres facteurs???}
 
 %--------------------------------------------------------------------------
 %	INTEROPERABILITY TEST
 %--------------------------------------------------------------------------
 \section{Interoperability test }
 
-We tested the compatibility between our programs with the ones of two other groups. It allowed us to fix some bugs in our code.
+We tested the compatibility between our programs with the ones of two other groups (Derval-Gego and Houssiaux-Istasse) using Wireshark. Let's notice that Wireshark displays acks when they are sent and not when they are not processed by the sender. So it is normal that some data packets appear after their corresponding acknowledgement.
 
-\subsection{Derval-Gego}
-\subsubsection{Our sender} 
+The only bug we detected and that we could not detect internally is that we used \texttt{crc32()} with a first argument of $0$ instead of "0x04C11DB7" which represent the divisor polynomial $x^{32} +x^{26} +x^{23} +x^{22} +x^{16} +x^{12} +x^{11} +x^{10} +x^{8} + x^{7} + x^{5} + x^{4} + x^{2} + x + 1$. All packets were therefore identified as invalid.
+ 
 
-grande nombre d'envoi du même packet
-
-\subsection{Our receiver} Tout ok, bonne réception de fichier
-    
 \end{document}
