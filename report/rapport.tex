@@ -180,11 +180,11 @@ We choose to create several agents responsible for different aspects of the send
 \end{itemize}
 The Figure~\ref{sender} summarizes the interactions between those agents. Network Simulator knows that a packet is the last one when the length entry is $< 512$. When the ack corresponding to the sequence number of this packet is received by the Network Simulator, it says to Acker that it can stop. Then Selective Repeat, Timer and Network simulator also stop.
 
-\subsubsection{Time before resending a packet}
-This time must be $> 2 \cdot \mathsf{delay}$ because it is the minimum delay between the transmission and reception of a packet.
-We have chosen $\max(3 \cdot \mathsf{delay}, \unit{1024}{\micro\second})$ since $3 \cdot \mathsf{delay}$ is bigger than $2 \cdot \mathsf{delay}$ and is simple to obtain.
-$\unit{1024}{\micro\second}$ prevent taking a time of 0 when a delay of $0$ is specified,
-in practice there is always a delay and with a time of 0, our sender sent many, many times each packet.
+\subsubsection{Time before resending a packet ($T$)}
+We must have $T > 2 \cdot \mathsf{delay}$ because it is the minimum delay between the transmission and reception of a packet.
+We have chosen $T = \max(3 \cdot \mathsf{delay}, \unit{1024}{\micro\second})$ since $3 \cdot \mathsf{delay}$ is bigger than $2 \cdot \mathsf{delay}$ and is simple to obtain.
+$\unit{1024}{\micro\second}$ prevent taking $T = 0$ when a delay of $0$ is specified,
+in practice there is always a delay and with $T = 0$, our sender sent many, many times each packet.
 
 \subsubsection{Clean exit in case of errors}
 We took care to properly exit the sender in case of error. In \lstinline|error.c|, we defined that when an error occurs, we print a message according to \lstinline|errno|
@@ -220,13 +220,13 @@ However, the problem with Acker does not occur when no error occurs or when the 
 Only with errors with functions like \lstinline|malloc|. For simplicity we have left this problem as a possible improvement.
 
 \subsubsection{Consideration of the variable size of the receiving window}
-The adaptation of the variable size of the sender was quite simple.
-We keep a cyclic buffer of size 31 and we have a variable stating the beginning of the window in this buffer and one with the size.
-We also ave an array of boolean static if one packet of the window has already been sent or acked.
+The adaptation of the variable window size of the sender was quite simple.
+We keep a cyclic buffer of size 31 like what will be explained for the receiver and we have a variable stating the beginning of the window in this buffer and one with the size of the window.
+We also have an array stating if one packet of the window has already been sent or acked.
 If the window size decreases, when the window will advance and we will get to a packet that we have already read and sent and we will just resend it and not read it again.
 
 \subsection{Receiver}
-The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq \text{\texttt{lastack}} \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations (see Figure~\ref{buffer}).  We used the same trick for the sending window.\\
+The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq \text{\texttt{lastack}} < 256$). The sequence number contained in an ack packet is then always equal to $\texttt{lastack} + 1 \pmod{256}$. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations (see Figure~\ref{buffer}).  We used the same trick for the sending window.
 
 \begin{figure}[!h]
 	\begin{center}
@@ -236,7 +236,7 @@ The implementation of the receiver is more straightforward. We implemented a buf
 	\end{center}
 \end{figure}
 
-In order to separate the implementation of the sender and the receiver, we didn't used our struct packet (structure that contains the pointers to the different areas of the packet) in the receiver. That way we already a little bit tested the interoperability internally.
+In order to separate the implementation of the sender and the receiver, we didn't use our \lstinline|struct packet| (structure that contains the pointers to the different areas of the packet) in the receiver but a \lstinline|char[520]| instead. That way we already tested a little bit the interoperability internally.
 
 %--------------------------------------------------------------------------
 %	LIMITATIONS
@@ -245,10 +245,10 @@ In order to separate the implementation of the sender and the receiver, we didn'
 
 Our implementation suffers from some limitations.
 
-\subsection{RTT optimization} The sender could update the RTT with respect to what it measures. If it sees that, on average, it receives an ack $x$ milliseconds after sending it, with $x << RTT$ (resp. $>>$), it could decrease (resp. increase) the value of the RTT.
+\subsection{Time before resend ($T$) optimization} The sender could update the $T$ with respect to what it measures. If it sees that, on average, it receives an ack $x$ milliseconds after sending it, with $x << T$ (resp. $>>$), it could decrease (resp. increase) the value of the $T$.
 
 \subsection{Last packet}
-When the receiver receives the last packet, it sends an ack back but it is possible that this acknowledgment gets lost. One idea is to force the receiver to wait a little bit. That way, the retransmission timer for this packet could expire, the packet could be retransmitted and the receiver would then retransmit one ack. But if the ack is not lost, then the receiver would block because of the \texttt{recvfrom()} operation. So, we just chose to close the receiver just after he sends the last ack. When the sender sees that the receiver is no longer listening, he also stops it's execution.
+When the receiver receives the last packet, it sends an ack back but it is possible that this acknowledgment gets lost. One idea is to force the receiver to wait a little bit. That way, the retransmission timer for this packet could expire, the packet could be retransmitted and the receiver would then retransmit one ack. But if the ack is not lost, then the receiver would block because of the \texttt{recvfrom()} operation so we would have to a non-blocking operation or adding a timeout. So, we just chose to close the receiver just after he sends the last ack. When the sender sees that the receiver is no longer listening, he also stops it's execution.
 
 \subsection{Smart variation of the receiving window size}
 One improvement of our implementation would be to really make the size of the receiving window vary. If the processor related to the receiver is slow, it would receive packets faster than it treats them. It would be better to ask the kernel how many packets the receiver still has to treat and if it sees that it can't follow, then it should decrease to size of the window. That way, the sender would be informed that the receiver can't follow via the window size specified in the ack packets and it would decrease it's own window size to send less packet at once.
