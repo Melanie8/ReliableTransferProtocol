@@ -4,3 +4,4 @@
 - Gérer erreurs -> ok normalement
 - Gérer windows dynamiques -> ok normalement
 - gérer le cas où le ack du dernier packet est perdu : receiver doit attendre -> limitation
+- stop hardcoder des valeurs

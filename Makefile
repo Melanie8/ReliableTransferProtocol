@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-I. -pthread -lz -g
 # Les .h
-DEPS = common.h error.h mailbox.h agent.h timer.h network.h sr.h acker.h
-OBJ_S = sender.o common.o error.o mailbox.o agent.o timer.o network.o sr.c acker.c
-OBJ_R = receiver.o common.o error.o
+DEPS = src/common.h src/error.h src/mailbox.h src/agent.h src/timer.h src/network.h src/sr.h src/acker.h
+OBJ_S = src/sender.o src/common.o src/error.o src/mailbox.o src/agent.o src/timer.o src/network.o src/sr.o src/acker.o
+OBJ_R = src/receiver.o src/common.o src/error.o
 
 all: sender receiver
 

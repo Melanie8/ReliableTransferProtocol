@@ -75,7 +75,7 @@ void send_mail_to_network_simulator (int seq, int id_in_window, bool last) {
     } else {
       alrm->id = id_in_window * 3 + 2;
       // at least waits 1.024 ms even if delay == 0
-      alrm->timeout = get_time_usec() + ((long) delay) * 3 + 1024;
+      alrm->timeout = get_time_usec() + MAX(((long) delay) * 3, 1024);
       sr_timeout[id_in_window] = alrm->timeout;
       alrm->inbox = sr_inbox;
       m->data = alrm;

@@ -1,7 +1,7 @@
 %--------------------------------------------------------------------------
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
 %--------------------------------------------------------------------------
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[francais]{babel}
 \usepackage[T1]{fontenc}
@@ -15,7 +15,6 @@
 \usepackage{fancyhdr} % Required for custom headers
 \usepackage{lastpage} % Required to determine the last page for the footer
 \usepackage{extramarks} % Required for headers and footers
-\usepackage[usenames,dvipsnames]{color} % Required for custom colors
 \usepackage{graphicx} % Required to insert images
 \usepackage{caption}
 \usepackage{subcaption}
@@ -27,6 +26,15 @@
 \usepackage[squaren,Gray]{SIunits}
 \usepackage{url}
 \usepackage{hyperref}
+
+% Color
+% cfr http://en.wikibooks.org/wiki/LaTeX/Colors
+\usepackage{color}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
+\definecolor{dkgreen}{rgb}{0.25,0.7,0.35}
+\definecolor{dkred}{rgb}{0.7,0,0}
+
+
 
 % Margins
 %\topmargin=-0.45in
@@ -51,6 +59,25 @@
 
 \definecolor{MyDarkGreen}{rgb}{0.0,0.4,0.0} % This is the color used for comments
 \lstloadlanguages{C} % Load C syntax for listings, for a list of other languages supported see: ftp://ftp.tex.ac.uk/tex-archive/macros/latex/contrib/listings/listings.pdf
+ \lstset{
+   numbers=left,
+   numberstyle=\tiny\color{gray},
+   basicstyle=\rm\small\ttfamily,
+   keywordstyle=\bfseries\color{dkred},
+   frame=single,
+   commentstyle=\color{gray}=small,
+   stringstyle=\color{dkgreen},
+   %backgroundcolor=\color{gray!10},
+   %tabsize=2,
+   rulecolor=\color{black!30},
+   %title=\lstname,
+   breaklines=true,
+   framextopmargin=2pt,
+   framexbottommargin=2pt,
+   %extendedchars=true,
+   %inputencoding=utf8x
+ }
+
 
 \begin{document}
 
@@ -155,43 +182,51 @@ The Figure~\ref{sender} summarizes the interactions between those agents. Networ
 
 \subsubsection{Time before resending a packet}
 This time must be $> 2 \cdot \mathsf{delay}$ because it is the minimum delay between the transmission and reception of a packet.
-We have chosen $3 \cdot \mathsf{delay} + \unit{1024}{\micro\second}$ since $3 \cdot \mathsf{delay}$ is bigger than $2 \cdot \mathsf{delay}$ and is simple to obtain.
+We have chosen $\max(3 \cdot \mathsf{delay}, \unit{1024}{\micro\second})$ since $3 \cdot \mathsf{delay}$ is bigger than $2 \cdot \mathsf{delay}$ and is simple to obtain.
 $\unit{1024}{\micro\second}$ prevent taking a time of 0 when a delay of $0$ is specified,
 in practice there is always a delay and with a time of 0, our sender sent many, many times each packet.
 
 \subsubsection{Clean exit in case of errors}
 We took care to properly exit the sender in case of error. In \lstinline|error.c|, we defined that when an error occurs, we print a message according to \lstinline|errno|
-and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set, the rest of the messages are ignored and the thread terminates. In \lstinline|sender.c|, we join each thread, close the file and exit with status \lstinline|EXIT_FAILURE|. We don't use any \texttt{exit()} in the middle of the main function, everything goes through the return.
+and we set the flag \lstinline|panic| to \lstinline|true|. In \lstinline|agent.c|, before each message, if the \lstinline|panic| flag is set, the rest of the messages are ignored and the thread terminates.
+Before an agent terminates, it calls itself a last time with a message \lstinline|STOP| so that it can free what needs to be.
+In \lstinline|sender.c|, we join each thread, close the file and the socket and exit with status \lstinline|EXIT_FAILURE|. We don't use any \texttt{exit()} anywhere except at the last inctruction of the main function, everything goes through this last instruction return.
 
 We checked via valgrind that we had no memory leak.
 \begin{lstlisting}[basicstyle=\ttfamily, basicstyle=\scriptsize]
 >> valgrind --leak-check=full ./sender ::1 2141 --file biglorem --splr 300 --sber 300
-==831== Memcheck, a memory error detector
-==831== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
-==831== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
-==831== Command: ./sender ::1 2141 --file biglorem --splr 300 --sber 300
-==831==
-Error receiving a packet
-read: Connection refused
+==15162== Memcheck, a memory error detector
+==15162== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==15162== Using Valgrind-3.10.0.SVN and LibVEX; rerun with -h for copyright info
+==15162== Command: ./sender ::1 2141 --file biglorem --delay 0 --splr 300 --sber 300
+==15162==
 failed to write, the receiver might have terminate
 write: Connection refused
-==831==
-==831== HEAP SUMMARY:
-==831==     in use at exit: 0 bytes in 0 blocks
-==831==   total heap usage: 1,216,617 allocs, 1,216,617 frees, 23,901,380 bytes allocated
-==831==
-==831== All heap blocks were freed -- no leaks are possible
-==831==
-==831== For counts of detected and suppressed errors, rerun with: -v
-==831== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+==15162==
+==15162== HEAP SUMMARY:
+==15162==     in use at exit: 0 bytes in 0 blocks
+==15162==   total heap usage: 89,438 allocs, 89,438 frees, 2,121,828 bytes allocated
+==15162==
+==15162== All heap blocks were freed -- no leaks are possible
+==15162==
+==15162== For counts of detected and suppressed errors, rerun with: -v
+==15162== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 \end{lstlisting}
 
-To be totally rigorous, when an error occurs, each agent ends normally expect sometimes the Acker if it is busy receiving. The other agents actually don't know if they have to kill him or if it is stopping. It would be possible to ``cancel'' this thread using \texttt{pthread\_cancel()}. However, this isn't typically best practice and we preferred to create a system where everything is well cancelled.
+To be totally rigorous, when an error occurs, each agent ends normally expect sometimes the Acker if it is busy receiving. The other agents actually don't know if they have to kill him or if it is stopping. It would be possible to ``cancel'' this thread using \lstinline|pthread_cancel()| instead of \lstinline|pthread_join|. However, this isn't typically best practice and we preferred to create a system where everything is well cancelled.
 
-\subsubsection{\textcolor{red}{Consideration of the variable size of the receiving window}}
+We could have also gave up the \lstinline|pthread_join| after some time and then use \lstinline|pthread_cancel|.
+However, the problem with Acker does not occur when no error occurs or when the receiver terminates while we are resending a packet (see the listing above).
+Only with errors with functions like \lstinline|malloc|. For simplicity we have left this problem as a possible improvement.
+
+\subsubsection{Consideration of the variable size of the receiving window}
+The adaptation of the variable size of the sender was quite simple.
+We keep a cyclic buffer of size 31 and we have a variable stating the beginning of the window in this buffer and one with the size.
+We also ave an array of boolean static if one packet of the window has already been sent or acked.
+If the window size decreases, when the window will advance and we will get to a packet that we have already read and sent and we will just resend it and not read it again.
 
 \subsection{Receiver}
-The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq lastack \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations (see Figure~\ref{buffer}).  We used the same trick for the sending window.\\
+The implementation of the receiver is more straightforward. We implemented a buffer to store out-of-sequence packets whose sequence numbers are in the receiving window. We thought of two ways to implement this buffer : create a linked list or create an array. The fist solution has the advantage to better manage the memory. Indeed, the size of the receiving window can change and with a linked list we can create a buffer whose size is really equal to the size of the receiving window. But this solution has a big drawback : the access of an element of a linked list is in $\mathcal{O}(n)$, where $n$ is the size of the list. Since we know the maximum size of the sending window and it is quite small ($31$ slots), it is better to simply create an array to have an access in $\mathcal{O}(1)$. Each slot of the buffer contains a boolean saying if it is empty or not and a corresponding packet. The receiver holds a variable \texttt{lastack} which corresponds to the sequence number of the last in-sequence packet that it has received (so $0 \leq \text{\texttt{lastack}} \leq 255$). The sequence number contained in an ack packet is then always equal to \texttt{lastack + 1 (mod 255)}. To avoid having to move some packets in the buffer when the window slides, we created a variable \texttt{lastack\_in\_window}, which goes from $0$ to $30$. The behavior of these two variables are similar. They are incremented in the same way but we work mod $256$ for \texttt{lastack} and mod $31$ for \texttt{lastack\_in\_window}. This variable allows us to ensure that a packet is mapped to the same slot of the buffer before and after the window slides by doing some appropriate modular computations (see Figure~\ref{buffer}).  We used the same trick for the sending window.\\
 
 \begin{figure}[!h]
 	\begin{center}
@@ -223,7 +258,7 @@ One improvement of our implementation would be to really make the size of the re
 %--------------------------------------------------------------------------
 \section{Factors limiting the performance}
 
-We analyzed the influence of the argument delay when the other arguments are equal to zero. Let's recall that we took RTT $=$ max($3 \cdot \mathsf{delay}$, $\unit{1024}{\micro\second}$).  The bigger delay is, the less packets will be sent through the network since the RTT will be bigger. At some point, the number of packets becomes logically stable because no packet be will retransmitted unnecessarily. The elapsed time between the first packet and the last packet sent through the network is a function that start the decrease and then increase. It also seems logical. If the RTT is too small, then we will waste time processing some packets that are retransmitted to early. If we wait a little more, we can avoid some retransmissions and gain time. But if the RTT is too big, then the overhead increases. We wait too much, we should ask a retransmission earlier.
+We analyzed the influence of the argument delay when the other arguments are equal to zero. Let's recall that we took, before retransmitting a packet, a time (let's call it the $T$) $T = \max(3 \cdot \mathsf{delay}, \unit{1024}{\micro\second})$.  The bigger delay is, the less packets will be sent through the network since $T$ will be bigger. At some point, the number of packets becomes logically stable because no packet be will retransmitted unnecessarily. The elapsed time between the first packet and the last packet sent through the network is a function that start the decrease and then increase. It also seems logical. If the $T$ is too small, then we will waste time processing some packets that are retransmitted to early. If we wait a little more, we can avoid some retransmissions and gain time. But if the $T$ is too big, then the overhead increases. We wait too much, we should ask a retransmission earlier.
 
 \begin{figure}[!h]
         \centering
@@ -241,18 +276,19 @@ We analyzed the influence of the argument delay when the other arguments are equ
 	\label{deltafluxvar}
 \end{figure}
 
-BON EN FAIT C'EST PAS SUPER UTILE CE QUE JE DIS, C'EST PEUT-ÊTRE PLUS INTERESSANT D'ANALYSER, POUR UN DELAY FIXE, L'INFLUENCE DU RTT
-\textcolor{red}{parler de l'influence des autres facteurs???}
+A very low $T$ can have very bad impact (that's also why we put the lower bound of $\unit{1024}{\micro\second}$) to our performance.
+The Network agent becomes overloaded with SEND request and cannot handle ACK and CONT (we have ignored it for simplicity, it is the message used by Acker to ask the Network if it has more ACK to expect).
+To solve it, we have chosen to take a fixed bound which is of course not ideal.
+For example, with valgrind, our program is much slower and the lower bound does not work as well.
+A better solution would have been to put different priorities in mailboxes so that ACK messages are treated first.
 
 %--------------------------------------------------------------------------
 %	INTEROPERABILITY TEST
 %--------------------------------------------------------------------------
-\section{Interoperability test }
+\section{Interoperability test}
 
-We tested the compatibility between our programs with the ones of two other groups (Derval-Gego and Jadin-Tihon) using Wireshark. Let's notice that Wireshark displays acks when they are sent and not when they are not processed by the sender. So it is normal that some data packets appear after their corresponding acknowledgement.
+We tested the compatibility between our programs with the ones of two other groups (Derval-Gego and Jadin-Tihon) using Wireshark. Let's notice that Wireshark displays acks when they are sent and not when they are processed by the sender. So it is normal that some data packets appear after their corresponding acknowledgement.
 
-The only bug we detected and that we could not detect internally is that we used \texttt{crc32()} with a first argument of $0$ instead of "0x04C11DB7" which represent the divisor polynomial $x^{32} +x^{26} +x^{23} +x^{22} +x^{16} +x^{12} +x^{11} +x^{10} +x^{8} + x^{7} + x^{5} + x^{4} + x^{2} + x + 1$. All packets were therefore identified as invalid.
-
-LE TRUC DE ISTASSE MARCHAIT PAS DONC JE TESTE AVEC JADIN-TIHON
+The only bug we detected and that we could not detect internally is that we used \texttt{crc32()} with a first argument of $0$ instead of ``0x04C11DB7'' which represent the divisor polynomial $x^{32} +x^{26} +x^{23} +x^{22} +x^{16} +x^{12} +x^{11} +x^{10} +x^{8} + x^{7} + x^{5} + x^{4} + x^{2} + x + 1$. All packets were therefore identified as invalid.
 
 \end{document}
